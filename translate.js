@@ -20,18 +20,13 @@ function current_time() {
 function check_account(api, note)
 {
 	const id = Buffer.from(note.pubkey)
-	const json_account = api.dbs.accounts.get(id)
+	const account = api.dbs.accounts.get(id)
 
-	if (!json_account)
+	if (!account)
 		return 'account not found'
 
-	try {
-		const account = JSON.parse(json_account)
-		if (current_time() >= account.expiry)
-			return 'account expired'
-	} catch {
-		return 'internal account error'
-	}
+	if (current_time() >= account.expiry)
+		return 'account expired'
 
 	return 'ok'
 }
