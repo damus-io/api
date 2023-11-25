@@ -92,8 +92,6 @@ async function deepl_translate_text(payload)
 		return data.translations[0].text;
 	}
 
-	console.log(data)
-
 	return null
 }
 
@@ -149,9 +147,7 @@ function handle_translate(api, req, res)
 		try {
 			const note = JSON.parse(body)
 			const payload = JSON.parse(note.content)
-			console.log("validating")
 			const validation_res = await validate_payload(api, note, payload)
-			console.log("done validating", validation_res)
 			//if (validation_res !== 'valid')
 				//return util.invalid_request(res, validation_res)
 			id = hash_payload(payload)
