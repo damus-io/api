@@ -1,0 +1,19 @@
+{
+  "name": "damus-api",
+  "description": "Damus purple api",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/damus-io/api"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "tap test/*.js"
+  },
+  "dependencies": {
+    "lmdb": "^2.9.1",
+    "nostr": "^0.2.8"
+  },
+  "devDependencies": {
+    "tap": "~0.2.5"
+  }
+}
