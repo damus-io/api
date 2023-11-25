@@ -76,11 +76,6 @@ function hash_payload(payload)
 	return hash.digest()
 }
 
-
-async function write_translation_result(translations)
-{
-}
-
 async function deepl_translate_text(payload)
 {
 	let resp = await fetch('https://api.deepl.com/v2/translate', {
