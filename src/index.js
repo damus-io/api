@@ -4,6 +4,7 @@ const lmdb = require('lmdb')
 const http = require('http')
 const Router = require('./server_helpers').Router
 const config_router = require('./router_config').config_router
+const dotenv = require('dotenv')
 
 function PurpleApi(opts = {})
 {
@@ -56,6 +57,9 @@ PurpleApi.prototype.handler = function pt_handle_request(app, req, res)
 module.exports = PurpleApi
 
 if (require.main == module) {
+	// Load .env file if it exists
+	dotenv.config()
+	
 	let translate = new PurpleApi()
 	translate.register_routes()
 	translate.serve(process.env.PORT)

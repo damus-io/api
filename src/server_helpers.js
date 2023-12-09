@@ -42,6 +42,7 @@ class Router {
     // MARK: - Handling Requests
 
     handle_request(req, res) {
+        console.log(`[ ${req.method} ] ${req.url}`);
         const route_match_info = this.find_route(req.url, req.method);
 
         if (!route_match_info || !route_match_info.route) {
