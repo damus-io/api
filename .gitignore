@@ -3,3 +3,4 @@ data.mdb
 lock.mdb
 .vscode
 .tap
+.env

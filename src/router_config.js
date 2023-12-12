@@ -1,6 +1,7 @@
 const { json_response, simple_response, error_response, invalid_request } = require('./server_helpers')
 const { create_account, get_account_info_payload } = require('./user_management')
 const handle_translate = require('./translate')
+const verify_receipt = require('./app_store_receipt_verifier').verify_receipt
 
 
 function config_router(app) {
@@ -51,6 +52,32 @@ function config_router(app) {
 		json_response(res, get_account_info_payload(result.account))
 		return
 	})
+
+    router.post('/accounts/(.+)/app-store-receipt', async (req, res, capture_groups) => {
+        const id = capture_groups[0]
+		if(!id) {
+			error_response(res, 'Could not parse account id')
+			return
+		}
+		let account = app.dbs.accounts.get(id)
+
+		if (!account) {
+			simple_response(res, 404)
+			return
+		}
+
+        const body = Buffer.from(req.body, 'base64').toString('ascii')
+
+		let expiry_date = await verify_receipt(body)
+
+		if (!expiry_date) {
+			error_response(res, 'Could not verify receipt')
+			return
+		}
+
+		account.expiry = expiry_date
+		app.dbs.accounts.put(id, account)
+    })
 }
 
 module.exports = { config_router }
