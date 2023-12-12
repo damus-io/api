@@ -43,7 +43,7 @@ function get_account_info_payload(account) {
     return {
         pubkey: account.pubkey,
         created_at: account.created_at,
-        expiry: account.expiry,
+        expiry: account.expiry ? account.expiry : null,
         active: (account.expiry && current_time() < account.expiry) ? true : false,
     }
 }

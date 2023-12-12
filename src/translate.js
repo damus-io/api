@@ -9,6 +9,7 @@ const translate_sources = new Set(['BG' ,'CS' ,'DA' ,'DE' ,'EL' ,'EN' ,'ES' ,'ET
 const translate_targets = new Set(['BG' ,'CS' ,'DA' ,'DE' ,'EL' ,'EN' ,'EN-GB' ,'EN-US' ,'ES' ,'ET' ,'FI' ,'FR' ,'HU' ,'ID' ,'IT' ,'JA' ,'KO' ,'LT' ,'LV' ,'NB' ,'NL' ,'PL' ,'PT' ,'PT-BR' ,'PT-PT' ,'RO' ,'RU' ,'SK' ,'SL' ,'SV' ,'TR' ,'UK' ,'ZH'])
 
 const DEEPL_KEY = process.env.DEEPL_KEY
+const DEEPL_URL = process.env.DEEPL_URL || 'https://api.deepl.com/v2/translate'
 
 if (!DEEPL_KEY)
 	throw new Error("expected DEEPL_KEY env var")
@@ -55,7 +56,7 @@ function hash_payload(payload)
 
 async function deepl_translate_text(payload)
 {
-	let resp = await fetch('https://api.deepl.com/v2/translate', {
+	let resp = await fetch(DEEPL_URL, {
 	    method: 'POST',
 	    headers: {
 		'Authorization': `DeepL-Auth-Key ${DEEPL_KEY}`,
