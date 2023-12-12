@@ -1,7 +1,9 @@
 
-const util = require('./helpers')
+const util = require('./server_helpers')
 const crypto = require('crypto')
 const nostr = require('nostr')
+const check_account = require('./user_management').check_account
+const current_time = require('./utils').current_time
 
 const translate_sources = new Set(['BG' ,'CS' ,'DA' ,'DE' ,'EL' ,'EN' ,'ES' ,'ET' ,'FI' ,'FR' ,'HU' ,'ID' ,'IT' ,'JA' ,'KO' ,'LT' ,'LV' ,'NB' ,'NL' ,'PL' ,'PT' ,'RO' ,'RU' ,'SK' ,'SL' ,'SV' ,'TR' ,'UK' ,'ZH'])
 const translate_targets = new Set(['BG' ,'CS' ,'DA' ,'DE' ,'EL' ,'EN' ,'EN-GB' ,'EN-US' ,'ES' ,'ET' ,'FI' ,'FR' ,'HU' ,'ID' ,'IT' ,'JA' ,'KO' ,'LT' ,'LV' ,'NB' ,'NL' ,'PL' ,'PT' ,'PT-BR' ,'PT-PT' ,'RO' ,'RU' ,'SK' ,'SL' ,'SV' ,'TR' ,'UK' ,'ZH'])
@@ -10,26 +12,6 @@ const DEEPL_KEY = process.env.DEEPL_KEY
 
 if (!DEEPL_KEY)
 	throw new Error("expected DEEPL_KEY env var")
-
-function current_time() {
-	return Math.floor(Date.now() / 1000);
-}
-
-// check to see if the account is active and is allowed to
-// translate stuff
-function check_account(api, note)
-{
-	const id = Buffer.from(note.pubkey)
-	const account = api.dbs.accounts.get(id)
-
-	if (!account)
-		return 'account not found'
-
-	if (current_time() >= account.expiry)
-		return 'account expired'
-
-	return 'ok'
-}
 
 async function validate_payload(api, note, payload)
 {
@@ -138,30 +120,23 @@ async function translate_payload(api, res, note, payload, trans_id)
 	delete api.translation.queue[trans_id]
 }
 
-function handle_translate(api, req, res)
+async function handle_translate(api, req, res)
 {
-	let body = ''
-
-	async function req_end() {
-		let id
-		try {
-			const note = JSON.parse(body)
-			const payload = JSON.parse(note.content)
-			const validation_res = await validate_payload(api, note, payload)
-			//if (validation_res !== 'valid')
-				//return util.invalid_request(res, validation_res)
-			id = hash_payload(payload)
-			return translate_payload(api, res, note, payload, id)
-		} catch (err) {
-			if (id)
-				delete api.translation.queue[id]
-			util.invalid_request(res, `error processing request: ${err}`)
-			throw err
-		}
+	let id
+	try {
+		const note = JSON.parse(req.body)
+		const payload = JSON.parse(note.content)
+		const validation_res = await validate_payload(api, note, payload)
+		//if (validation_res !== 'valid')
+			//return util.invalid_request(res, validation_res)
+		id = hash_payload(payload)
+		return translate_payload(api, res, note, payload, id)
+	} catch (err) {
+		if (id)
+			delete api.translation.queue[id]
+		util.invalid_request(res, `error processing request: ${err}`)
+		throw err
 	}
-
-	req.on('data', chunk => { body += chunk.toString(); })
-	req.on('end', req_end);
 }
 
 module.exports = handle_translate
