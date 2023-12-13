@@ -1,8 +1,9 @@
 const test = require('tap').test;
 const Router = require('../src/server_helpers.js').Router;
 
+
 test('Router - Registering Routes', (t) => {
-  const router = new Router();
+  const router = new Router("http://localhost:8989");
 
   t.test('should register a GET route', (t) => {
     router.get('/users', (req, res) => {
@@ -28,7 +29,7 @@ test('Router - Registering Routes', (t) => {
 });
 
 test('Router - Handling Requests', (t) => {
-  const router = new Router();
+  const router = new Router("http://localhost:8989");
 
   t.test('should handle a valid GET request', (t) => {
     router.get('/users/(.+)', (req, res, captureGroups) => {
@@ -65,7 +66,7 @@ test('Router - Handling Requests', (t) => {
 });
 
 test('Router - Matching Routes', (t) => {
-  const router = new Router();
+  const router = new Router("http://localhost:8989");
 
   t.same(router.match_route('/users', '/users'), [], 'Route should be matched with no capture groups');
   t.same(router.match_route('/users/123', '/users/\\d+'), [], 'Route should be matched with no capture groups');

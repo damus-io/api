@@ -2,7 +2,7 @@ const { createHash }  = require('crypto')
 
 function hash_sha256(data)
 {
-	return createHash('sha256').update(data).digest()
+	return createHash('sha256').update(data).digest().toString('hex');
 }
 
 function current_time() {

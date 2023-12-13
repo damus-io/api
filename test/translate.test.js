@@ -1,7 +1,7 @@
 const tap = require('tap');
 const translate_payload = require('../src/translate');
-const nostr_tools = require('nostr-tools');
 const sinon = require('sinon');
+const nostr = require('nostr');
 
 
 // MARK: - Tests
@@ -19,7 +19,7 @@ tap.test('translate_payload - Existing translation in database (mocked db)', asy
             t.same(response, '{\"text\":\"<EXISTING_TRANSLATION>\"}\n');
         },
     };
-    const req = generate_test_req();
+    const req = await generate_test_req();
 
     await translate_payload(api, req, res);
 
@@ -39,7 +39,7 @@ tap.test('translate_payload - New translation (mocked server)', async (t) => {
             t.same(response, '{\"text\":\"Mock translation\"}\n');
         },
     };
-    const req = generate_test_req();
+    const req = await generate_test_req();
 
     // Create a stub for fetch
     const fetchStub = sinon.stub(global, 'fetch').returns(Promise.resolve({
@@ -109,8 +109,8 @@ function generate_test_api(config) {
 }
 
 
-function generate_test_req() {
-    const note = generate_test_event();
+async function generate_test_req() {
+    const note = await generate_test_event();
     const req = {
         body: JSON.stringify(note),
     };
@@ -118,9 +118,9 @@ function generate_test_req() {
 }
 
 
-function generate_test_event(payload) {
-    let sk = nostr_tools.generatePrivateKey() // `sk` is a hex string
-    let pk = nostr_tools.getPublicKey(sk) // `pk` is a hex string
+async function generate_test_event(payload) {
+    let sk = '10a9842fadc0aae2a649a1b707bf97e48c787b8517af4728ba3ec304089451be'
+    let pk = nostr.getPublicKey(sk)
 
     let event = {
         kind: 1,
@@ -130,8 +130,8 @@ function generate_test_event(payload) {
         pubkey: pk,
     }
 
-    event.id = nostr_tools.getEventHash(event)
-    event.sig = nostr_tools.getSignature(event, sk)
+    event.id = await nostr.calculateId(event)
+    event.sig = await nostr.signId(sk, event.id)
 
     return event
 }

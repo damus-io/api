@@ -1,8 +1,11 @@
+const nip98_auth = require('./nip98_auth');
+
 class Router {
     // MARK: - Constructors
 
-    constructor() {
+    constructor(base_url) {
         this.routes = [];
+        this.base_url = base_url;
     }
 
     // MARK: - Registering Routes
@@ -23,6 +26,15 @@ class Router {
         })
     }
 
+    post_authenticated(path, handler) {
+        this.routes.push({
+            path,
+            handler,
+            method: 'POST',
+            authenticated: true
+        })
+    }
+
     put(path, handler) {
         this.routes.push({
             path,
@@ -31,11 +43,29 @@ class Router {
         })
     }
 
+    put_authenticated(path, handler) {
+        this.routes.push({
+            path,
+            handler,
+            method: 'PUT',
+            authenticated: true
+        })
+    }
+
     delete(path, handler) {
         this.routes.push({
             path,
             handler,
             method: 'DELETE'
+        })
+    }
+
+    delete_authenticated(path, handler) {
+        this.routes.push({
+            path,
+            handler,
+            method: 'DELETE',
+            authenticated: true
         })
     }
 
@@ -52,9 +82,23 @@ class Router {
 
         var body = '';
         req.on('data', chunk => { body += chunk.toString(); })
-	    req.on('end', () => {
+	    req.on('end', async () => {
             req.body = body;
-            route_match_info.route.handler(req, res, route_match_info.capture_groups);
+            if(!route_match_info.route.authenticated) {
+                route_match_info.route.handler(req, res, route_match_info.capture_groups);
+                return;
+            }
+            else if(route_match_info.route.authenticated) {
+                // Get Authorization header
+                const auth_header = req.headers.authorization;
+                // Check if it is valid
+                let auth_pubkey = await nip98_auth(auth_header, this.base_url + req.url, req.method, req.body);
+                if(!auth_pubkey) {
+                    unauthorized_response(res, 'Nostr authorization header invalid');
+                    return;
+                }
+                route_match_info.route.handler(req, res, route_match_info.capture_groups, auth_pubkey);
+            }
         })
     }
 
@@ -120,6 +164,11 @@ function simple_response(res, code)
 function error_response(res, message, code=500) {
 	res.writeHead(code, {'Content-Type': 'application/json'})
 	res.end(JSON.stringify({error: message}) + "\n")
+}
+
+function unauthorized_response(res, message) {
+    res.writeHead(401, {'Content-Type': 'application/json'})
+    res.end(JSON.stringify({error: message}) + "\n")
 }
 
 function json_response(res, json, code=200) {
