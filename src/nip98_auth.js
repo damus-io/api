@@ -54,11 +54,19 @@ async function nip98_auth(auth_header, url, method, body) {
             return null;
         }
     
-        let authorized_content_hash = note.tags.find(tag => tag[0] == 'payload')[1];
-    
-        let body_hash = hash_sha256(body);
-        if(authorized_content_hash != body_hash) {
-            return null;
+        if(body !== undefined && body !== null) {
+            let authorized_content_hash = note.tags.find(tag => tag[0] == 'payload')[1];
+
+            let body_hash = hash_sha256(body);
+            if(authorized_content_hash != body_hash) {
+                return null;
+            }
+        }
+        else {
+            // If there is no body, there should be NO payload tag
+            if(note.tags.find(tag => tag[0] == 'payload')) {
+                return null;
+            }
         }
     
         // Verify that the ID corresponds to the note contents

@@ -16,7 +16,7 @@ function PurpleApi(opts = {})
 	const translations = db.openDB('translations')
 	const accounts = db.openDB('accounts')
 	const dbs = {translations, accounts}
-	const router = new Router()
+	const router = new Router(process.env.BASE_URL || 'http://localhost:8989')
 
 	// translation data
 	this.translation = {queue}

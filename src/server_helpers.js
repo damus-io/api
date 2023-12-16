@@ -18,6 +18,15 @@ class Router {
         });
     }
 
+    get_authenticated(path, handler) {
+        this.routes.push({
+            path,
+            handler,
+            method: 'GET',
+            authenticated: true
+        });
+    }
+
     post(path, handler) {
         this.routes.push({
             path,
@@ -80,8 +89,21 @@ class Router {
 			return;
         }
 
-        var body = '';
-        req.on('data', chunk => { body += chunk.toString(); })
+        var body = undefined;
+        req.on('data', chunk => { 
+            if(!chunk) return;
+            if(chunk instanceof String) {
+                body = body ? body + chunk : chunk;
+                return;
+            }
+            else if(chunk instanceof Buffer) {
+                body = body ? Buffer.concat([body, chunk]) : chunk;
+                return;
+            }
+            else {
+                body = body ? body + chunk.toString() : chunk.toString();
+            }
+        })
 	    req.on('end', async () => {
             req.body = body;
             if(!route_match_info.route.authenticated) {
