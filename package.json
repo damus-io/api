@@ -15,13 +15,16 @@
   },
   "dependencies": {
     "@apple/app-store-server-library": "^0.2.0",
+    "body-parser": "^1.20.2",
     "dotenv": "^16.3.1",
+    "express": "^4.18.2",
     "lmdb": "^2.9.1",
     "nostr": "^0.2.8"
   },
   "devDependencies": {
     "@tapjs/sinon": "^1.1.17",
     "sinon": "^17.0.1",
+    "supertest": "^6.3.3",
     "tap": "^18.6.1"
   }
 }

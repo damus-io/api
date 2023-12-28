@@ -1,22 +1,16 @@
 const { current_time } = require('./utils')
 
-// check to see if the account is active and is allowed to
-// translate stuff
-function check_account(api, note) {
-    return check_account_by_pubkey_hex(api, note.pubkey)
-}
-
-function check_account_by_pubkey_hex(api, pubkey) {
+function check_account(api, pubkey) {
     const id = Buffer.from(pubkey)
     const account = api.dbs.accounts.get(id)
 
     if (!account)
-        return 'account not found'
+        return { ok: false, message: 'Account not found' }
 
     if (!account.expiry || current_time() >= account.expiry)
-        return 'account expired'
+        return { ok: false, message: 'Account expired' }
 
-    return 'ok'
+    return { ok: true, message: null }
 }
 
 function create_account(api, pubkey, expiry) {
@@ -48,4 +42,4 @@ function get_account_info_payload(account) {
     }
 }
 
-module.exports = { check_account, check_account_by_pubkey_hex, create_account, get_account_info_payload }
+module.exports = { check_account, create_account, get_account_info_payload }

@@ -1,82 +1,98 @@
 const { json_response, simple_response, error_response, invalid_request, unauthorized_response } = require('./server_helpers')
-const { create_account, get_account_info_payload } = require('./user_management')
+const { create_account, get_account_info_payload, check_account } = require('./user_management')
 const handle_translate = require('./translate')
 const verify_receipt = require('./app_store_receipt_verifier').verify_receipt
-
+const bodyParser = require('body-parser')
+const { required_nip98_auth, capture_raw_body } = require('./nip98_auth')
 
 function config_router(app) {
-    const router = app.router
+  const router = app.router
 
-	// MARK: Translation routes
+  router.use(bodyParser.json({ verify: capture_raw_body, type: 'application/json' }))
+  router.use(bodyParser.raw({ verify: capture_raw_body, type: 'application/octet-stream' }))
 
-	router.get('/translate', (req, res, capture_groups) => {
-		handle_translate(app, req, res)
-	})
+  router.use((req, res, next) => {
+    res.on('finish', () => {
+      console.log(`[ ${req.method} ] ${req.url}: ${res.statusCode}`)
+    });
+    next()
+  })
 
-	// MARK: Account management routes
+  // MARK: Translation routes
 
-	router.get('/accounts/(.+)', (req, res, capture_groups) => {
-		const id = capture_groups[0]
-		if(!id) {
-			error_response(res, 'Could not parse account id')
-			return
-		}
-		let account = app.dbs.accounts.get(id)
+  router.get('/translate', required_nip98_auth, async (req, res) => {
+    const check_account_result = check_account(app, req.authorized_pubkey)
+    if (!check_account_result.ok) {
+      unauthorized_response(res, check_account_result.message)
+      return
+    }
+    handle_translate(app, req, res)
+  })
 
-		if (!account) {
-			simple_response(res, 404)
-			return
-		}
+  // MARK: Account management routes
 
-		let account_info = get_account_info_payload(account)
+  router.get('/accounts/:pubkey', (req, res) => {
+    const id = req.params.pubkey
+    if (!id) {
+      error_response(res, 'Could not parse account id')
+      return
+    }
+    let account = app.dbs.accounts.get(id)
 
-		json_response(res, account_info)
-	})
+    if (!account) {
+      simple_response(res, 404)
+      return
+    }
 
-	router.post_authenticated('/accounts', (req, res, capture_groups, auth_pubkey) => {
-		let result = create_account(app, auth_pubkey, null)
+    let account_info = get_account_info_payload(account)
 
-		if (result.request_error) {
-			invalid_request(res, result.request_error)
-			return
-		}
+    json_response(res, account_info)
+  })
 
-		json_response(res, get_account_info_payload(result.account))
-		return
-	})
+  router.post('/accounts', required_nip98_auth, (req, res) => {
+    let result = create_account(app, req.authorized_pubkey, null)
 
-    router.post_authenticated('/accounts/(.+)/app-store-receipt', async (req, res, capture_groups, auth_pubkey) => {
-        const id = capture_groups[0]
-		if(!id) {
-			error_response(res, 'Could not parse account id')
-			return
-		}
-		if(id != auth_pubkey) {
-			unauthorized_response(res, 'You are not authorized to access this account')
-			return
-		}
+    if (result.request_error) {
+      invalid_request(res, result.request_error)
+      return
+    }
 
-		let account = app.dbs.accounts.get(id)
+    json_response(res, get_account_info_payload(result.account))
+    return
+  })
 
-		if (!account) {
-			simple_response(res, 404)
-			return
-		}
+  router.post('/accounts/:pubkey/app-store-receipt', required_nip98_auth, async (req, res) => {
+    const id = req.params.pubkey
+    if (!id) {
+      error_response(res, 'Could not parse account id')
+      return
+    }
+    if (id != req.authorized_pubkey) {
+      unauthorized_response(res, 'You are not authorized to access this account')
+      return
+    }
 
-        const body = Buffer.from(req.body, 'base64').toString('ascii')
+    let account = app.dbs.accounts.get(id)
 
-		let expiry_date = await verify_receipt(body)
+    if (!account) {
+      simple_response(res, 404)
+      return
+    }
 
-		if (!expiry_date) {
-			error_response(res, 'Could not verify receipt')
-			return
-		}
+    const body = Buffer.from(req.body, 'base64').toString('ascii')
 
-		account.expiry = expiry_date
-		app.dbs.accounts.put(id, account)
-		json_response(res, get_account_info_payload(account))
-		return
-    })
+    let expiry_date = await verify_receipt(body)
+
+    if (!expiry_date) {
+      error_response(res, 'Could not verify receipt')
+      return
+    }
+
+    account.expiry = expiry_date
+    app.dbs.accounts.put(id, account)
+    json_response(res, get_account_info_payload(account))
+    return
+  })
 }
 
 module.exports = { config_router }

@@ -1,28 +1,11 @@
 const test = require('tap').test;
-const Router = require('../src/server_helpers.js').Router;
+const express = require('express');
 const config_router = require('../src/router_config.js').config_router;
 const nostr = require('nostr');
 const current_time = require('../src/utils.js').current_time;
+const { supertest_client } = require('./utils.js');
 
-test('config_router - Translation routes', (t) => {
-  const app = {
-    router: new Router(),
-    dbs: {
-      accounts: {
-        get: () => { }
-      }
-    }
-  };
-
-  config_router(app);
-
-  const route = app.router.find_route('/translate', 'GET')
-
-  t.ok(route, 'GET /translate route should be registered');
-  t.end();
-});
-
-test('config_router - Account management routes', (t) => {
+test('config_router - Account management routes', async (t) => {
   const account_info = {
     pubkey: 'abc123',
     created_at: Date.now() - 60 * 60 * 24 * 30 * 1000, // 30 days ago
@@ -33,7 +16,7 @@ test('config_router - Account management routes', (t) => {
   }
 
   const app = {
-    router: new Router('http://localhost:8989'),
+    router: express(),
     dbs: {
       accounts: {
         get: (id) => {
@@ -46,33 +29,23 @@ test('config_router - Account management routes', (t) => {
     }
   };
 
+  const request = await supertest_client(app.router, t);
+
   config_router(app);
 
-  t.test('should handle a valid GET request for an existing account ', (t) => {
-    const req = {
-      url: '/accounts/abc123',
-      method: 'GET',
-      on: (event, callback) => {
-        if (event === 'end') {
-          callback();
-        }
-      }
-    };
-    const res = {
-      end: (data) => {
-        const expectedData = JSON.stringify({
-          pubkey: account_info.pubkey,
-          created_at: account_info.created_at,
-          expiry: account_info.expiry,
-          active: true,
-        }) + '\n';
-        t.same(data, expectedData, 'Response should match expected value');
-        t.end();
-      },
-      writeHead: () => { }
-    };
+  t.test('should handle a valid GET request for an existing account ', async (t) => {
+    const res = await request
+      .get('/accounts/abc123')
+      .expect(200);
 
-    app.router.handle_request(req, res);
+    const expectedData = {
+      pubkey: account_info.pubkey,
+      created_at: account_info.created_at,
+      expiry: account_info.expiry,
+      active: true,
+    };
+    t.same(res.body, expectedData, 'Response should match expected value');
+    t.end();
   });
 
   t.test('should handle a valid POST request to create an account', async (t) => {
@@ -84,8 +57,8 @@ test('config_router - Account management routes', (t) => {
       created_at: current_time(),
       kind: 27235,
       tags: [
-          ["u", app.router.base_url + "/accounts"],
-          ["method", "POST"]
+        ["u", app.router.base_url + "/accounts"],
+        ["method", "POST"]
       ],
       content: '',
     }
@@ -99,35 +72,15 @@ test('config_router - Account management routes', (t) => {
     }
     let auth_note_base64 = Buffer.from(JSON.stringify(auth_note)).toString('base64');
 
-    return new Promise((resolve, reject) => {
-      const req = {
-        url: '/accounts',
-        headers: {
-          'authorization': 'Nostr ' + auth_note_base64
-        },
-        method: 'POST',
-        on: (event, callback) => {
-          if (event === 'data') {
-            // No data
-          }
-          if (event === 'end') {
-            callback();
-          }
-        }
-      };
-      const res = {
-        end: (data) => {
-          data = JSON.parse(data)
-          t.equal(data.pubkey, test_pubkey, 'Pubkey should match requested value');
-          t.equal(data.active, false, 'Account should be inactive before payment is made');
-          t.equal(data.expiry, null, 'Account should not have an expiry before payment is made');
-          resolve();
-        },
-        writeHead: () => { }
-      };
-      
-      app.router.handle_request(req, res);
-    });
+    const res = await request
+      .post('/accounts')
+      .set('authorization', 'Nostr ' + auth_note_base64)
+      .expect(200);
+
+    t.equal(res.body.pubkey, test_pubkey, 'Pubkey should match requested value');
+    t.equal(res.body.active, false, 'Account should be inactive before payment is made');
+    t.equal(res.body.expiry, null, 'Account should not have an expiry before payment is made');
+    t.end();
   });
 
   t.end();
