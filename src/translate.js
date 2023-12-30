@@ -103,8 +103,8 @@ async function translate_payload(api, res, payload, trans_id) {
 async function handle_translate(api, req, res) {
   let id
   try {
-    const source = req.query.source
-    const target = req.query.target
+    const source = req.query.source.toUpperCase()
+    const target = req.query.target.toUpperCase()
     const q = req.query.q
     const payload = { source, target, q }
     const validation_res = await validate_payload(payload)
