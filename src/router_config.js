@@ -3,13 +3,15 @@ const { create_account, get_account_info_payload, check_account } = require('./u
 const handle_translate = require('./translate')
 const verify_receipt = require('./app_store_receipt_verifier').verify_receipt
 const bodyParser = require('body-parser')
-const { required_nip98_auth, capture_raw_body } = require('./nip98_auth')
+const cors = require('cors');
+const { required_nip98_auth, capture_raw_body, optional_nip98_auth } = require('./nip98_auth')
 
 function config_router(app) {
   const router = app.router
 
   router.use(bodyParser.json({ verify: capture_raw_body, type: 'application/json' }))
   router.use(bodyParser.raw({ verify: capture_raw_body, type: 'application/octet-stream' }))
+  router.use(cors({ origin: ['https://damus.io', 'http://localhost:3000'] }))
 
   router.use((req, res, next) => {
     res.on('finish', () => {
