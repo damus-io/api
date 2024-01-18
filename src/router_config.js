@@ -5,6 +5,8 @@ const verify_receipt = require('./app_store_receipt_verifier').verify_receipt
 const bodyParser = require('body-parser')
 const cors = require('cors');
 const { required_nip98_auth, capture_raw_body, optional_nip98_auth } = require('./nip98_auth')
+const { nip19 } = require('nostr-tools')
+const { PURPLE_ONE_MONTH } = require('./invoicing')
 
 function config_router(app) {
   const router = app.router
@@ -95,6 +97,114 @@ function config_router(app) {
     json_response(res, get_account_info_payload(account))
     return
   })
+
+  // MARK: Product and checkout routes
+
+  // Allows the website to get a list of options for the product
+  router.get('/products', (req, res) => {
+    json_response(res, app.invoice_manager.invoice_templates)
+  })
+
+  // Initiates a new checkout for a specific product
+  router.post('/ln-checkout', (req, res) => {
+    const body = req.body
+    const product_template_name = body.product_template_name
+    if (!product_template_name) {
+      invalid_request(res, 'Missing product_template_name')
+      return
+    }
+    if (!app.invoice_manager.invoice_templates[product_template_name]) {
+      invalid_request(res, 'Invalid product_template_name. Valid names are: ' + Object.keys(app.invoice_manager.invoice_templates).join(', '))
+      return
+    }
+    const checkout_object = app.invoice_manager.new_checkout(product_template_name)
+    json_response(res, checkout_object)
+  })
+
+  // Used to check the status of a checkout operation
+  // Note, this will not return the payment status of the invoice, only connection parameters from which the client can use to connect to the LN node
+  //
+  // Returns:
+  // {
+  //    id: <UUID>
+  //    product_template_name: <PRODUCT_TEMPLATE_NAME>
+  //    verified_pubkey: <HEX_ENCODED_PUBKEY> | null
+  //    invoice: {
+  //      bolt11: <BOLT11_INVOICE>
+  //      label: <LABEL_FOR_INVOICE_MONITORING>
+  //      connection_params: {
+  //        nodeid: <HEX_ENCODED_NODEID>
+  //        address: <HOST:PORT>
+  //        rune: <RUNE_STRING>
+  //      },
+  //      paid?: <BOOLEAN>  // Only present when checkout is complete
+  //    } | null,
+  //    completed: <BOOLEAN>    // Tells the client whether the checkout is complete (even if it was cancelled)
+  // }
+  router.get('/ln-checkout/:checkout_id', async (req, res) => {
+    const checkout_id = req.params.checkout_id
+    if (!checkout_id) {
+      error_response(res, 'Could not parse checkout_id')
+      return
+    }
+    const checkout_object = await app.invoice_manager.get_checkout_object(checkout_id)
+    if (!checkout_object) {
+      simple_response(res, 404)
+      return
+    }
+    json_response(res, checkout_object)
+  })
+
+  // Tells the server to check if the invoice has been paid, and proceed with the checkout if it has
+  // This route will return the checkout object with payment status appended to the invoice object
+  //
+  // Returns:
+  // {
+  //    id: <UUID>
+  //    product_template_name: <PRODUCT_TEMPLATE_NAME>
+  //    verified_pubkey: <HEX_ENCODED_PUBKEY> | null
+  //    invoice: {
+  //      bolt11: <BOLT11_INVOICE>
+  //      label: <LABEL_FOR_INVOICE_MONITORING>
+  //      connection_params: {
+  //        nodeid: <HEX_ENCODED_NODEID>
+  //        address: <HOST:PORT>
+  //        rune: <RUNE_STRING>
+  //      },
+  //      paid?: <BOOLEAN>  // Only present when checkout is complete
+  //    } | null,
+  //    completed: <BOOLEAN>  // Tells the client whether the checkout is complete (even if it was cancelled)
+  // }
+  router.post('/ln-checkout/:checkout_id/check-invoice', async (req, res) => {
+    const checkout_id = req.params.checkout_id
+    if (!checkout_id) {
+      error_response(res, 'Could not parse checkout_id')
+      return
+    }
+    const checkout_object = await app.invoice_manager.check_checkout_object_invoice(checkout_id)
+    json_response(res, checkout_object)
+  })
+
+  // Used by the Damus app to authenticate the user, and generate the final LN invoice
+  // This is necessary and useful to prevent several potential issues:
+  // - Prevents the user from purchasing without having a compatible Damus app installed
+  // - Prevents human errors when selecting the wrong npub
+  // - Prevents the user from purchasing for another user. Although gifting is a great feature, it needs to be implemented with more care to avoid confusion.
+  router.put('/ln-checkout/:checkout_id/verify', required_nip98_auth, async (req, res) => {
+    const checkout_id = req.params.checkout_id
+    if (!checkout_id) {
+      error_response(res, 'Could not parse checkout_id')
+      return
+    }
+    const response = await app.invoice_manager.verify_checkout_object(checkout_id, req.authorized_pubkey)
+    if (response.request_error) {
+      invalid_request(res, response.request_error)
+    }
+    if (response.checkout_object) {
+      json_response(res, response.checkout_object)
+    }
+  })
+
 }
 
 module.exports = { config_router }

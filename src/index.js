@@ -6,6 +6,7 @@ const Router = require('./server_helpers').Router
 const config_router = require('./router_config').config_router
 const dotenv = require('dotenv')
 const express = require('express')
+const { PurpleInvoiceManager } = require('./invoicing')
 
 function PurpleApi(opts = {}) {
   if (!(this instanceof PurpleApi))
@@ -15,7 +16,8 @@ function PurpleApi(opts = {}) {
   const db = lmdb.open({ path: '.' })
   const translations = db.openDB('translations')
   const accounts = db.openDB('accounts')
-  const dbs = { translations, accounts }
+  const invoices = db.openDB('invoices')
+  const dbs = { translations, accounts, invoices }
   const router = express()
 
   // translation data
@@ -25,6 +27,8 @@ function PurpleApi(opts = {}) {
   this.dbs = dbs
   this.opts = opts
   this.router = router
+  this.invoice_manager = new PurpleInvoiceManager(this, process.env.LN_NODE_ID, process.env.LN_NODE_ADDRESS, process.env.LN_RUNE, process.env.LN_WS_PROXY)
+  this.invoice_manager.connect_and_init()
 
   return this
 }
