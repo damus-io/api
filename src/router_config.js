@@ -1,5 +1,5 @@
 const { json_response, simple_response, error_response, invalid_request, unauthorized_response } = require('./server_helpers')
-const { create_account, get_account_info_payload, check_account } = require('./user_management')
+const { create_account, get_account_info_payload, check_account, get_account, put_account } = require('./user_management')
 const handle_translate = require('./translate')
 const verify_receipt = require('./app_store_receipt_verifier').verify_receipt
 const bodyParser = require('body-parser')
@@ -41,7 +41,7 @@ function config_router(app) {
       error_response(res, 'Could not parse account id')
       return
     }
-    let account = app.dbs.accounts.get(id)
+    let account = get_account(app, id)
 
     if (!account) {
       simple_response(res, 404)
@@ -76,7 +76,7 @@ function config_router(app) {
       return
     }
 
-    let account = app.dbs.accounts.get(id)
+    let account = get_account(app, id)
 
     if (!account) {
       simple_response(res, 404)
@@ -93,7 +93,7 @@ function config_router(app) {
     }
 
     account.expiry = expiry_date
-    app.dbs.accounts.put(id, account)
+    put_account(app, id, account)
     json_response(res, get_account_info_payload(account))
     return
   })

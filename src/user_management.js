@@ -1,8 +1,17 @@
 const { current_time } = require('./utils')
 
+// Helper function to get an account from the database by pubkey
+function get_account(api, pubkey) {
+  return api.dbs.accounts.get(pubkey)
+}
+
+// Helper function to put an account into the database by pubkey
+function put_account(api, pubkey, account) {
+  api.dbs.accounts.put(pubkey, account)
+}
+
 function check_account(api, pubkey) {
-  const id = Buffer.from(pubkey)
-  const account = api.dbs.accounts.get(id)
+  const account = get_account(api, pubkey)
 
   if (!account)
     return { ok: false, message: 'Account not found' }
@@ -14,8 +23,7 @@ function check_account(api, pubkey) {
 }
 
 function create_account(api, pubkey, expiry, created_by_user = true) {
-  const id = Buffer.from(pubkey)
-  const account = api.dbs.accounts.get(id)
+  const account = get_account(api, pubkey)
 
   if (account)
     return { request_error: 'account already exists' }
@@ -27,13 +35,12 @@ function create_account(api, pubkey, expiry, created_by_user = true) {
     expiry: expiry,                       // Date and time when the account expires
   }
 
-  api.dbs.accounts.put(id, new_account)
+  put_account(api, pubkey, new_account)
   return { account: new_account, request_error: null }
 }
 
 function bump_expiry(api, pubkey, expiry_delta) {
-  const id = Buffer.from(pubkey)
-  const account = api.dbs.accounts.get(id)
+  const account = get_account(api, pubkey)
   if (!account) {
     // Create account if it doesn't exist already
     return create_account(api, pubkey, current_time() + expiry_delta)
@@ -46,7 +53,7 @@ function bump_expiry(api, pubkey, expiry_delta) {
     // Bump expiry if it already exists
     account.expiry += expiry_delta
   }
-  api.dbs.accounts.put(id, account)
+  put_account(api, pubkey, account)
   return { account: account, request_error: null }
 }
 
@@ -62,4 +69,4 @@ function get_account_info_payload(account) {
   }
 }
 
-module.exports = { check_account, create_account, get_account_info_payload, bump_expiry }
+module.exports = { check_account, create_account, get_account_info_payload, bump_expiry, get_account, put_account }
