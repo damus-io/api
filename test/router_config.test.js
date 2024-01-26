@@ -11,8 +11,11 @@ test('config_router - Account management routes', async (t) => {
     created_at: Date.now() - 60 * 60 * 24 * 30 * 1000, // 30 days ago
     expiry: Date.now() + 60 * 60 * 24 * 30 * 1000 // 30 days
   };
+  const pubkeys_to_user_ids = {
+    'abc123': 1
+  };
   const accounts = {
-    'abc123': account_info
+    1: account_info
   }
 
   const app = {
@@ -24,8 +27,29 @@ test('config_router - Account management routes', async (t) => {
         },
         put: (id, account) => {
           accounts[id] = account
+        },
+        getKeys: (options) => {
+          if (options && options.reverse) {
+            return Object.keys(accounts).reverse()
+          }
+          return Object.keys(accounts)
+        }
+      },
+      pubkeys_to_user_ids: {
+        get: (pubkey) => {
+          return pubkeys_to_user_ids[pubkey]
+        },
+        put: (pubkey, user_id) => {
+          pubkeys_to_user_ids[pubkey] = user_id
+        },
+        getKeys: (options) => {
+          if (options.reverse) {
+            return Object.keys(pubkeys_to_user_ids).reverse()
+          }
+          return Object.keys(pubkeys_to_user_ids)
         }
       }
+
     }
   };
 

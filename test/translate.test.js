@@ -136,6 +136,12 @@ async function generate_test_api(t, config) {
           }
         },
       },
+      pubkeys_to_user_ids: {
+        get: (pubkey) => {
+          return 1;
+        },
+        put: (pubkey, user_id) => { },
+      },
     },
   };
 

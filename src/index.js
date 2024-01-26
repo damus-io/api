@@ -16,8 +16,9 @@ function PurpleApi(opts = {}) {
   const db = lmdb.open({ path: '.' })
   const translations = db.openDB('translations')
   const accounts = db.openDB('accounts')
+  const pubkeys_to_user_ids = db.openDB('pubkeys_to_user_ids')
   const invoices = db.openDB('invoices')
-  const dbs = { translations, accounts, invoices }
+  const dbs = { translations, accounts, invoices, pubkeys_to_user_ids }
   const router = express()
 
   // translation data

@@ -1,13 +1,41 @@
 const { current_time } = require('./utils')
 
+// Helper function to get a user id from a pubkey
+function get_user_id_from_pubkey(api, pubkey) {
+  return api.dbs.pubkeys_to_user_ids.get(pubkey)
+}
+
+// Helper function to get an account and user id from a pubkey
+function get_account_and_user_id(api, pubkey) {
+  const user_id = get_user_id_from_pubkey(api, pubkey)
+  if (!user_id)
+    return { account: null, user_id: null }
+  const account = api.dbs.accounts.get(user_id)
+  return { account: account, user_id: user_id }
+}
+
 // Helper function to get an account from the database by pubkey
 function get_account(api, pubkey) {
-  return api.dbs.accounts.get(pubkey)
+  return get_account_and_user_id(api, pubkey).account
+}
+
+// Gets the last user id in the database, for counting the number of accounts in the database
+function get_last_user_id(api) {
+  for (const key of api.dbs.accounts.getKeys({ reverse: true })) {
+    return key
+  }
+  return null
 }
 
 // Helper function to put an account into the database by pubkey
 function put_account(api, pubkey, account) {
-  api.dbs.accounts.put(pubkey, account)
+  var user_id = get_user_id_from_pubkey(api, pubkey)
+  if (user_id == null) {
+    const last_user_id = get_last_user_id(api)
+    user_id = last_user_id != null ? parseInt(last_user_id) + 1 : 1
+    api.dbs.pubkeys_to_user_ids.put(pubkey, user_id)
+  }
+  api.dbs.accounts.put(user_id, account)
 }
 
 function check_account(api, pubkey) {
