@@ -36,6 +36,7 @@ function put_account(api, pubkey, account) {
     api.dbs.pubkeys_to_user_ids.put(pubkey, user_id)
   }
   api.dbs.accounts.put(user_id, account)
+  return { account: account, user_id: user_id }
 }
 
 function check_account(api, pubkey) {
@@ -63,8 +64,8 @@ function create_account(api, pubkey, expiry, created_by_user = true) {
     expiry: expiry,                       // Date and time when the account expires
   }
 
-  put_account(api, pubkey, new_account)
-  return { account: new_account, request_error: null }
+  const { user_id } = put_account(api, pubkey, new_account)
+  return { account: new_account, request_error: null, user_id: user_id }
 }
 
 function bump_expiry(api, pubkey, expiry_delta) {
@@ -85,7 +86,7 @@ function bump_expiry(api, pubkey, expiry_delta) {
   return { account: account, request_error: null }
 }
 
-function get_account_info_payload(account) {
+function get_account_info_payload(subscriber_number, account) {
   if (!account)
     return null
 
@@ -93,8 +94,9 @@ function get_account_info_payload(account) {
     pubkey: account.pubkey,
     created_at: account.created_at,
     expiry: account.expiry ? account.expiry : null,
+    subscriber_number: subscriber_number,
     active: (account.expiry && current_time() < account.expiry) ? true : false,
   }
 }
 
-module.exports = { check_account, create_account, get_account_info_payload, bump_expiry, get_account, put_account }
+module.exports = { check_account, create_account, get_account_info_payload, bump_expiry, get_account, put_account, get_account_and_user_id, get_user_id_from_pubkey }

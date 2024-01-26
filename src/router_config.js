@@ -1,5 +1,5 @@
 const { json_response, simple_response, error_response, invalid_request, unauthorized_response } = require('./server_helpers')
-const { create_account, get_account_info_payload, check_account, get_account, put_account } = require('./user_management')
+const { create_account, get_account_info_payload, check_account, get_account, put_account, get_account_and_user_id } = require('./user_management')
 const handle_translate = require('./translate')
 const verify_receipt = require('./app_store_receipt_verifier').verify_receipt
 const bodyParser = require('body-parser')
@@ -41,14 +41,14 @@ function config_router(app) {
       error_response(res, 'Could not parse account id')
       return
     }
-    let account = get_account(app, id)
+    let { account, user_id } = get_account_and_user_id(app, id)
 
     if (!account) {
       simple_response(res, 404)
       return
     }
 
-    let account_info = get_account_info_payload(account)
+    let account_info = get_account_info_payload(user_id, account)
 
     json_response(res, account_info)
   })
@@ -61,7 +61,7 @@ function config_router(app) {
       return
     }
 
-    json_response(res, get_account_info_payload(result.account))
+    json_response(res, get_account_info_payload(result.user_id, result.account))
     return
   })
 
@@ -93,8 +93,8 @@ function config_router(app) {
     }
 
     account.expiry = expiry_date
-    put_account(app, id, account)
-    json_response(res, get_account_info_payload(account))
+    const { user_id } = put_account(app, id, account)
+    json_response(res, get_account_info_payload(user_id, account))
     return
   })
 

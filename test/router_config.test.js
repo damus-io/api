@@ -65,6 +65,7 @@ test('config_router - Account management routes', async (t) => {
     const expectedData = {
       pubkey: account_info.pubkey,
       created_at: account_info.created_at,
+      subscriber_number: 1,
       expiry: account_info.expiry,
       active: true,
     };
