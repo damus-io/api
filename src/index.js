@@ -6,6 +6,7 @@ const Router = require('./server_helpers').Router
 const config_router = require('./router_config').config_router
 const dotenv = require('dotenv')
 const express = require('express')
+const debug = require('debug')('api')
 const { PurpleInvoiceManager } = require('./invoicing')
 
 function PurpleApi(opts = {}) {
@@ -29,6 +30,7 @@ function PurpleApi(opts = {}) {
   this.opts = opts
   this.router = router
   this.invoice_manager = new PurpleInvoiceManager(this, process.env.LN_NODE_ID, process.env.LN_NODE_ADDRESS, process.env.LN_RUNE, process.env.LN_WS_PROXY)
+  debug("loaded invoice-manager node_id:%s node_addr:%s rune:%s proxy:%s", process.env.LN_NODE_ID, process.env.LN_NODE_ADDRESS, process.env.LN_RUNE, process.env.LN_WS_PROXY)
   this.invoice_manager.connect_and_init()
 
   return this
