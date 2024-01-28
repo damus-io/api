@@ -9,7 +9,7 @@ const express = require('express')
 const debug = require('debug')('api')
 const { PurpleInvoiceManager } = require('./invoicing')
 
-const ENV_VARS = ["LN_NODE_ID", "LN_NODE_ADDRESS", "LN_RUNE", "LN_WS_PROXY", "DEEPL_KEY"]
+const ENV_VARS = ["LN_NODE_ID", "LN_NODE_ADDRESS", "LN_RUNE", "LN_WS_PROXY", "DEEPL_KEY", "DB_PATH"]
 
 function check_env() {
   const missing = []
@@ -30,7 +30,7 @@ function PurpleApi(opts = {}) {
   check_env()
 
   const queue = {}
-  const db = lmdb.open({ path: '.' })
+  const db = lmdb.open({ path: process.env.DB_PATH })
   const translations = db.openDB('translations')
   const accounts = db.openDB('accounts')
   const pubkeys_to_user_ids = db.openDB('pubkeys_to_user_ids')
