@@ -9,9 +9,25 @@ const express = require('express')
 const debug = require('debug')('api')
 const { PurpleInvoiceManager } = require('./invoicing')
 
+const ENV_VARS = ["LN_NODE_ID", "LN_NODE_ADDRESS", "LN_RUNE", "LN_WS_PROXY", "DEEPL_KEY"]
+
+function check_env() {
+  const missing = []
+  for (const env_var of ENV_VARS) {
+    if (process.env[env_var] == null) {
+      missing.push(env_var)
+    }
+  }
+  if (missing.length > 0) {
+    throw new Error(`Missing environment variables: ${missing.join(", ")}`)
+  }
+}
+
 function PurpleApi(opts = {}) {
   if (!(this instanceof PurpleApi))
     return new PurpleApi(opts)
+
+  check_env()
 
   const queue = {}
   const db = lmdb.open({ path: '.' })
