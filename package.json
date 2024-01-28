@@ -6,6 +6,9 @@
     "url": "https://github.com/damus-io/api"
   },
   "main": "index.js",
+  "bin": {
+    "damus-api": "./src/index.js"
+  },
   "scripts": {
     "test": "DEEPL_KEY=123 tap test/*.test.js",
     "start": "node src/index.js",
@@ -23,7 +26,8 @@
     "lnsocket": "^0.3.3",
     "nostr": "^0.2.8",
     "nostr-tools": "^2.1.2",
-    "proxyquire": "^2.1.3"
+    "proxyquire": "^2.1.3",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@tapjs/sinon": "^1.1.17",

@@ -1264,6 +1264,15 @@ let
         sha512 = "pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA==";
       };
     };
+    "uuid-9.0.1" = {
+      name = "uuid";
+      packageName = "uuid";
+      version = "9.0.1";
+      src = fetchurl {
+        url = "https://registry.npmjs.org/uuid/-/uuid-9.0.1.tgz";
+        sha512 = "b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==";
+      };
+    };
     "vary-1.1.2" = {
       name = "vary";
       packageName = "vary";
@@ -1506,6 +1515,7 @@ let
       sources."undici-types-5.26.5"
       sources."unpipe-1.0.0"
       sources."utils-merge-1.0.1"
+      sources."uuid-9.0.1"
       sources."vary-1.1.2"
       sources."weak-lru-cache-1.2.2"
       sources."webidl-conversions-3.0.1"
