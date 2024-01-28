@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+rm -rf node_modules
+node2nix -18 -l package-lock.json
+nix-build -A package
