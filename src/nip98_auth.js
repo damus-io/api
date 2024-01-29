@@ -103,7 +103,7 @@ function capture_raw_body(req, res, buf, encoding) {
 // Please make sure to use another middleware to capture the raw body of the request and exponse it as `req.raw_body`
 async function optional_nip98_auth(req, res, next) {
   const auth_header = req.headers.authorization;
-  const full_url = req.protocol + '://' + req.get('Host') + req.originalUrl;
+  const full_url = 'https://' + req.get('Host') + req.originalUrl;
 
   if ((req.raw_body === undefined || req.raw_body === null) && (req.body !== undefined && req.body !== null && Object.keys(req.body).length > 0)) {
     throw new Error('raw_body is not defined in request object. Please make sure to use some middleware to capture the raw body and expose it to req.raw_body');
