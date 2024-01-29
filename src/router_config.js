@@ -7,6 +7,7 @@ const cors = require('cors');
 const { required_nip98_auth, capture_raw_body, optional_nip98_auth } = require('./nip98_auth')
 const { nip19 } = require('nostr-tools')
 const { PURPLE_ONE_MONTH } = require('./invoicing')
+const error = require("debug")("api:error")
 
 function config_router(app) {
   const router = app.router
@@ -205,7 +206,8 @@ function config_router(app) {
         json_response(res, response.checkout_object)
       }
     } catch (e) {
-      invalid_request(res, e)
+      error("%s", e.toString())
+      invalid_request(res, e.toString())
     }
   })
 
