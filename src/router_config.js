@@ -196,12 +196,16 @@ function config_router(app) {
       error_response(res, 'Could not parse checkout_id')
       return
     }
-    const response = await app.invoice_manager.verify_checkout_object(checkout_id, req.authorized_pubkey)
-    if (response.request_error) {
-      invalid_request(res, response.request_error)
-    }
-    if (response.checkout_object) {
-      json_response(res, response.checkout_object)
+    try {
+      const response = await app.invoice_manager.verify_checkout_object(checkout_id, req.authorized_pubkey)
+      if (response.request_error) {
+        invalid_request(res, response.request_error)
+      }
+      if (response.checkout_object) {
+        json_response(res, response.checkout_object)
+      }
+    } catch (e) {
+      invalid_request(res, e)
     }
   })
 
