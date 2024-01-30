@@ -1,9 +1,10 @@
 const { AppStoreServerAPIClient, Environment, ReceiptUtility, Order, ProductType } = require("@apple/app-store-server-library")
+const { current_time } = require("./utils")
 
 
 async function verify_receipt(receipt_data) {
     if(process.env.MOCK_VERIFY_RECEIPT) {
-        return Date.now() + 1000 * 60 * 60 * 24 * 30
+        return current_time() + 60 * 60 * 24 * 30
     }
 
     const issuerId = "99b16628-15e4-4668-972b-eeff55eeff55"
