@@ -35,7 +35,8 @@ function PurpleApi(opts = {}) {
   const accounts = db.openDB('accounts')
   const pubkeys_to_user_ids = db.openDB('pubkeys_to_user_ids')
   const invoices = db.openDB('invoices')
-  const dbs = { translations, accounts, invoices, pubkeys_to_user_ids }
+  const checkout_sessions = db.openDB('checkout_sessions')
+  const dbs = { translations, accounts, invoices, pubkeys_to_user_ids, checkout_sessions }
   const router = express()
 
   // translation data

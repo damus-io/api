@@ -47,7 +47,7 @@ class PurpleInvoiceManager {
     this.ws_proxy_address = ws_proxy_address
     this.invoices_db = api.dbs.invoices
     this.invoice_templates = getInvoiceTemplates()
-    this.checkout_objects = {}
+    this.checkout_sessions_db = api.dbs.checkout_sessions
     this.api = api
   }
 
@@ -81,13 +81,13 @@ class PurpleInvoiceManager {
       invoice: null,
       completed: false
     }
-    this.checkout_objects[checkout_id] = checkout_object  // Not persistent, but checkouts can be ephemeral
+    this.checkout_sessions_db.put(checkout_id, checkout_object)
     return checkout_object
   }
 
   // Verifies the user who is performing the checkout, and automatically generates an invoice for them to pay. Returns the updated checkout object.
   async verify_checkout_object(checkout_id, authorized_pubkey) {
-    const checkout_object = deep_copy(this.checkout_objects[checkout_id]) // Deep copy to avoid intermittent issues when client requests the checkout object during modification
+    const checkout_object = this.checkout_sessions_db.get(checkout_id)
     if (!checkout_object) {
       return { request_error: "Invalid checkout_id" }
     }
@@ -112,16 +112,13 @@ class PurpleInvoiceManager {
       }
     }
     // Update the checkout object since the state has changed. Changes are written all at once to avoid intermittent issues when client requests the checkout object during modification
-    this.checkout_objects[checkout_id] = checkout_object
+    this.checkout_sessions_db.put(checkout_id, checkout_object)
     return { checkout_object }
   }
 
   // Gets a deep copy of the checkout object
   async get_checkout_object(checkout_id) {
-    if (!this.checkout_objects[checkout_id]) {
-      return null
-    }
-    const checkout_object = deep_copy(this.checkout_objects[checkout_id]) // Deep copy to avoid modifying the original object
+    const checkout_object = this.checkout_sessions_db.get(checkout_id)
     if (!checkout_object) {
       return null
     }
@@ -136,7 +133,7 @@ class PurpleInvoiceManager {
       if (checkout_object.invoice.paid) {
         this.handle_successful_payment(checkout_object.invoice.bolt11)
         checkout_object.completed = true
-        this.checkout_objects[checkout_id] = checkout_object  // Update the checkout object since the state has changed
+        this.checkout_sessions_db.put(checkout_id, checkout_object)  // Update the checkout object since the state has changed
       }
     }
     return checkout_object
