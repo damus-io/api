@@ -54,19 +54,19 @@ function config_router(app) {
     json_response(res, account_info)
   })
 
-  router.post('/accounts', required_nip98_auth, (req, res) => {
-    let result = create_account(app, req.authorized_pubkey, null)
-
-    if (result.request_error) {
-      invalid_request(res, result.request_error)
-      return
-    }
-
-    json_response(res, get_account_info_payload(result.user_id, result.account))
-    return
-  })
-
   if (process.env.ENABLE_IAP_PAYMENTS) {
+    router.post('/accounts', required_nip98_auth, (req, res) => {
+      let result = create_account(app, req.authorized_pubkey, null)
+
+      if (result.request_error) {
+        invalid_request(res, result.request_error)
+        return
+      }
+
+      json_response(res, get_account_info_payload(result.user_id, result.account))
+      return
+    })
+
     router.post('/accounts/:pubkey/app-store-receipt', required_nip98_auth, async (req, res) => {
       const id = req.params.pubkey
       if (!id) {
