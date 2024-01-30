@@ -66,38 +66,40 @@ function config_router(app) {
     return
   })
 
-  router.post('/accounts/:pubkey/app-store-receipt', required_nip98_auth, async (req, res) => {
-    const id = req.params.pubkey
-    if (!id) {
-      error_response(res, 'Could not parse account id')
+  if (process.env.ENABLE_IAP_PAYMENTS) {
+    router.post('/accounts/:pubkey/app-store-receipt', required_nip98_auth, async (req, res) => {
+      const id = req.params.pubkey
+      if (!id) {
+        error_response(res, 'Could not parse account id')
+        return
+      }
+      if (id != req.authorized_pubkey) {
+        unauthorized_response(res, 'You are not authorized to access this account')
+        return
+      }
+
+      let account = get_account(app, id)
+
+      if (!account) {
+        simple_response(res, 404)
+        return
+      }
+
+      const body = Buffer.from(req.body, 'base64').toString('ascii')
+
+      let expiry_date = await verify_receipt(body)
+
+      if (!expiry_date) {
+        error_response(res, 'Could not verify receipt')
+        return
+      }
+
+      account.expiry = expiry_date
+      const { user_id } = put_account(app, id, account)
+      json_response(res, get_account_info_payload(user_id, account))
       return
-    }
-    if (id != req.authorized_pubkey) {
-      unauthorized_response(res, 'You are not authorized to access this account')
-      return
-    }
-
-    let account = get_account(app, id)
-
-    if (!account) {
-      simple_response(res, 404)
-      return
-    }
-
-    const body = Buffer.from(req.body, 'base64').toString('ascii')
-
-    let expiry_date = await verify_receipt(body)
-
-    if (!expiry_date) {
-      error_response(res, 'Could not verify receipt')
-      return
-    }
-
-    account.expiry = expiry_date
-    const { user_id } = put_account(app, id, account)
-    json_response(res, get_account_info_payload(user_id, account))
-    return
-  })
+    })
+  }
 
   // MARK: Product and checkout routes
 
