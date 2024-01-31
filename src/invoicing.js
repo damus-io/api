@@ -76,7 +76,7 @@ class PurpleInvoiceManager {
   }
 
   // Initiates a new checkout
-  new_checkout(template_name) {
+  async new_checkout(template_name) {
     const checkout_id = uuidv4()
     const checkout_object = {
       id: checkout_id,
@@ -85,7 +85,7 @@ class PurpleInvoiceManager {
       invoice: null,
       completed: false
     }
-    this.checkout_sessions_db.put(checkout_id, checkout_object)
+    await this.checkout_sessions_db.put(checkout_id, checkout_object)
     return checkout_object
   }
 
@@ -116,7 +116,7 @@ class PurpleInvoiceManager {
       }
     }
     // Update the checkout object since the state has changed. Changes are written all at once to avoid intermittent issues when client requests the checkout object during modification
-    this.checkout_sessions_db.put(checkout_id, checkout_object)
+    await this.checkout_sessions_db.put(checkout_id, checkout_object)
     return { checkout_object }
   }
 
@@ -137,7 +137,7 @@ class PurpleInvoiceManager {
       if (checkout_object.invoice.paid) {
         this.handle_successful_payment(checkout_object.invoice.bolt11)
         checkout_object.completed = true
-        this.checkout_sessions_db.put(checkout_id, checkout_object)  // Update the checkout object since the state has changed
+        await this.checkout_sessions_db.put(checkout_id, checkout_object)  // Update the checkout object since the state has changed
       }
     }
     return checkout_object

@@ -109,7 +109,7 @@ function config_router(app) {
   })
 
   // Initiates a new checkout for a specific product
-  router.post('/ln-checkout', (req, res) => {
+  router.post('/ln-checkout', async (req, res) => {
     const body = req.body
     const product_template_name = body.product_template_name
     if (!product_template_name) {
@@ -120,7 +120,7 @@ function config_router(app) {
       invalid_request(res, 'Invalid product_template_name. Valid names are: ' + Object.keys(app.invoice_manager.invoice_templates).join(', '))
       return
     }
-    const checkout_object = app.invoice_manager.new_checkout(product_template_name)
+    const checkout_object = await app.invoice_manager.new_checkout(product_template_name)
     json_response(res, checkout_object)
   })
 
