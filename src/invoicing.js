@@ -6,6 +6,12 @@ const { v4: uuidv4 } = require('uuid')
 const PURPLE_ONE_MONTH = "purple_one_month"
 const PURPLE_ONE_YEAR = "purple_one_year"
 const PURGE_OLD_INVOICES = false  // Disabled for now as we would like to keep records of all invoices
+const LN_INVOICE_INSTRUCTIONS = `
+INSTRUCTIONS:
+1. Pay for this invoice using your Lightning wallet.
+2. Once paid, please go back to the checkout page you were on. In iOS you can use the app switcher to go back to the browser.
+3. Follow the instructions on the checkout page to complete checkout.
+`;
 
 function getInvoiceTemplates() {
   return process.env.TEST_PRODUCTS ?
@@ -150,7 +156,7 @@ class PurpleInvoiceManager {
     }
 
     const template = this.invoice_templates[template_name]
-    const description = template.description + "\nnpub: " + npub
+    const description = template.description + "\nnpub: " + npub + "\n\n" + LN_INVOICE_INSTRUCTIONS
     const amount_msat = template.amount_msat
     const label = `lnlink-purple-invoice-${uuidv4()}`
     // TODO: In the future, we might want to set specific expiry times and mechanisms to avoid having the user pay a stale/unmonitored invoice, and to relieve the server from having to monitor invoices forever.
