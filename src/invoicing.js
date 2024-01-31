@@ -12,11 +12,13 @@ function getInvoiceTemplates() {
     {
       "purple_one_month": {
         description: "Purple (1 mo) (test)",
+        special_label: null,
         amount_msat: 1000,  // Make a cheap invoice for testing
         expiry: 30 * 24 * 60 * 60 // 30 days
       },
       "purple_one_year": {
         description: "Purple (1 yr) (test)",
+        special_label: "Save 16%!",
         amount_msat: 1000,  // Make a cheap invoice for testing
         expiry: 365 * 24 * 60 * 60 // 365 days
       }
@@ -25,12 +27,14 @@ function getInvoiceTemplates() {
     {
       "purple_one_month": {
         description: "Purple (One Month)",
+        special_label: null,
         // TODO: Make this value change based on the exchange rate of BTC vs USD (or not? 1 BTC = 1 BTC, USD is a shitcoin since 1971)
         amount_msat: 15000 * 1000, // 15k sats / month
         expiry: 30 * 24 * 60 * 60 // 30 days
       },
       "purple_one_year": {
         description: "Purple (One Year)",
+        special_label: "Save 16%!",
         // TODO: Make this value change based on the exchange rate of BTC vs USD (or not? 1 BTC = 1 BTC, USD is a shitcoin since 1971)
         amount_msat: 15000 * 10 * 1000, // 150k sats / year
         expiry: 365 * 24 * 60 * 60 // 365 days
