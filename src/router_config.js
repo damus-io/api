@@ -213,6 +213,59 @@ function config_router(app) {
     }
   })
 
+  // MARK: Admin routes
+
+  // Used by the admin to create a new verified checkout
+  // This was created to allow us to bypass the verification step if the user does not have a Damus version that supports the LN flow
+  // 
+  // To use it, here is an example curl command:
+  /*
+    curl -X PUT '<url>/admin/ln-checkout/new-verified-checkout' \
+    -H 'Content-Type: application/json' \
+    -d '{
+      "admin_password": "<admin_password>",
+      "product_template_name": "<purple_one_month or purple_one_year>",
+      "authorized_pubkey": "<authorized_pubkey_in_hex>"
+    }'
+  */
+  router.put('/admin/ln-checkout/new-verified-checkout', async (req, res) => {
+    const body = req.body
+    const product_template_name = body.product_template_name
+    const authorized_pubkey = body.authorized_pubkey
+    const admin_password = body.admin_password
+    if(!process.env.ADMIN_PASSWORD) {
+      unauthorized_response(res, 'Admin password not set in the environment variables')
+      return
+    }
+    if (!admin_password) {
+      unauthorized_response(res, 'Missing admin_password')
+      return
+    }
+    if (admin_password != process.env.ADMIN_PASSWORD) {
+      unauthorized_response(res, 'Invalid admin password')
+      return
+    }
+    if (!product_template_name) {
+      invalid_request(res, 'Missing product_template_name')
+      return
+    }
+    if (!authorized_pubkey) {
+      invalid_request(res, 'Missing authorized_pubkey')
+      return
+    }
+    if (!app.invoice_manager.invoice_templates[product_template_name]) {
+      invalid_request(res, 'Invalid product_template_name. Valid names are: ' + Object.keys(app.invoice_manager.invoice_templates).join(', '))
+      return
+    }
+    const checkout_object = await app.invoice_manager.new_checkout(product_template_name)
+    const { checkout_object: new_checkout_object, request_error } = await app.invoice_manager.verify_checkout_object(checkout_object.id, authorized_pubkey)
+    if (request_error) {
+      invalid_request(res, "Error when verifying checkout: " + request_error)
+      return
+    }
+    json_response(res, new_checkout_object)
+  })
+
 }
 
 module.exports = { config_router }
