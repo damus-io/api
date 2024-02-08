@@ -67,6 +67,10 @@ function config_router(app) {
       return
     })
 
+    // This route is used to verify an app store receipt and extend the expiry date of an account
+    // This is used for Apple in-app purchases
+    // The receipt should be sent as a binary blob in the request body. 
+    // Make sure to set the Content-Type header to application/octet-stream
     router.post('/accounts/:pubkey/app-store-receipt', required_nip98_auth, async (req, res) => {
       const id = req.params.pubkey
       if (!id) {
@@ -84,10 +88,8 @@ function config_router(app) {
         simple_response(res, 404)
         return
       }
-
-      const body = Buffer.from(req.body, 'base64').toString('ascii')
-
-      let expiry_date = await verify_receipt(body)
+      
+      let expiry_date = await verify_receipt(req.body)
 
       if (!expiry_date) {
         error_response(res, 'Could not verify receipt')
