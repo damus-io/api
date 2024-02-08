@@ -14,7 +14,9 @@
     "start": "node src/index.js",
     "mock_deepl": "node test_utils/mock_deepl.js",
     "start_with_mock": "DEEPL_KEY=123 DEEPL_URL=http://localhost:8990 node src/index.js",
-    "dev": "npm run mock_deepl & npm run start_with_mock"
+    "dev": "npm run mock_deepl & npm run start_with_mock",
+    "type-check": "tsc --checkJs --allowJs src/*.js --noEmit --skipLibCheck",
+    "type-check-path": "tsc --checkJs --allowJs --noEmit --skipLibCheck"
   },
   "dependencies": {
     "@apple/app-store-server-library": "^0.2.0",
@@ -34,6 +36,7 @@
     "@tapjs/sinon": "^1.1.17",
     "sinon": "^17.0.1",
     "supertest": "^6.3.3",
-    "tap": "^18.6.1"
+    "tap": "^18.6.1",
+    "typescript": "^5.3.3"
   }
 }
