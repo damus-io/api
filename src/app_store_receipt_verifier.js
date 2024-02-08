@@ -7,12 +7,12 @@ async function verify_receipt(receipt_data) {
         return current_time() + 60 * 60 * 24 * 30
     }
 
-    const issuerId = "99b16628-15e4-4668-972b-eeff55eeff55"
-    const keyId = "ABCDEFGHIJ"
-    const bundleId = "com.jb55.damus2"
-    const filePath = "/path/to/key/SubscriptionKey_ABCDEFGHIJ.p8"
+    const issuerId = process.env.IAP_ISSUER_ID
+    const keyId = process.env.IAP_KEY_ID
+    const bundleId = process.env.IAP_BUNDLE_ID
+    const filePath = process.env.IAP_PRIVATE_KEY_PATH
     const encodedKey = fs.readFileSync(filePath, "utf8")
-    const environment = Environment.SANDBOX
+    const environment = process.env.IAP_ENVIRONMENT === "Sandbox" ? Environment.SANDBOX : Environment.PRODUCTION
 
     const client = new AppStoreServerAPIClient(encodedKey, keyId, issuerId, bundleId, environment)
 
