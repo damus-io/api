@@ -14,7 +14,7 @@ function config_router(app) {
 
   router.use(bodyParser.json({ verify: capture_raw_body, type: 'application/json' }))
   router.use(bodyParser.raw({ verify: capture_raw_body, type: 'application/octet-stream' }))
-  router.use(cors({ origin: ['https://damus.io', 'http://localhost:3000'] }))
+  router.use(cors({ origin: get_allowed_cors_origins() }))
 
   router.use((req, res, next) => {
     res.on('finish', () => {
@@ -266,6 +266,16 @@ function config_router(app) {
     json_response(res, new_checkout_object)
   })
 
+}
+
+function get_allowed_cors_origins() {
+  if (process.env.CORS_ALLOWED_ORIGINS) {
+    return process.env.CORS_ALLOWED_ORIGINS.split(',')
+  }
+  else {
+    // Default to Damus.io and localhost
+    return ["https://damus.io", "http://localhost:3000"]
+  }
 }
 
 module.exports = { config_router }
