@@ -10,7 +10,7 @@
     "damus-api": "./src/index.js"
   },
   "scripts": {
-    "test": "DEEPL_KEY=123 tap test/*.test.js",
+    "test": "ALLOW_HTTP_AUTH=\"true\" DEEPL_KEY=123 tap test/*.test.js",
     "start": "node src/index.js",
     "mock_deepl": "node test_utils/mock_deepl.js",
     "start_with_mock": "DEEPL_KEY=123 DEEPL_URL=http://localhost:8990 node src/index.js",
