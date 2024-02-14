@@ -1,4 +1,5 @@
 const { current_time } = require('./utils')
+const { v4: uuidv4 } = require('uuid')
 
 // Helper function to get a user id from a pubkey
 function get_user_id_from_pubkey(api, pubkey) {
@@ -99,4 +100,21 @@ function get_account_info_payload(subscriber_number, account) {
   }
 }
 
-module.exports = { check_account, create_account, get_account_info_payload, bump_expiry, get_account, put_account, get_account_and_user_id, get_user_id_from_pubkey }
+// Helper function to get a user uuid from a pubkey
+// 
+// @param {Object} api - The API object
+// @param {string} pubkey - The public key of the user, hex encoded
+// 
+// @returns {string} - The user uuid, in uppercase
+function get_user_uuid(api, pubkey) {
+  const uuid = api.dbs.pubkeys_to_user_uuids.get(pubkey)
+  if (!uuid) {
+    // Generate a new uuid
+    const new_uuid = uuidv4().toUpperCase()
+    api.dbs.pubkeys_to_user_uuids.put(pubkey, new_uuid)
+    return new_uuid
+  }
+  return uuid
+}
+
+module.exports = { check_account, create_account, get_account_info_payload, bump_expiry, get_account, put_account, get_account_and_user_id, get_user_id_from_pubkey, get_user_uuid }

@@ -34,9 +34,10 @@ function PurpleApi(opts = {}) {
   const translations = db.openDB('translations')
   const accounts = db.openDB('accounts')
   const pubkeys_to_user_ids = db.openDB('pubkeys_to_user_ids')
+  const pubkeys_to_user_uuids = db.openDB('pubkeys_to_user_uuids')  // Needed for association with Apple In-App Purchases
   const invoices = db.openDB('invoices')
   const checkout_sessions = db.openDB('checkout_sessions')
-  const dbs = { translations, accounts, invoices, pubkeys_to_user_ids, checkout_sessions }
+  const dbs = { translations, accounts, invoices, pubkeys_to_user_ids, checkout_sessions, pubkeys_to_user_uuids }
   const router = express()
 
   // translation data

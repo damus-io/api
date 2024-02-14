@@ -1,5 +1,5 @@
 const { json_response, simple_response, error_response, invalid_request, unauthorized_response } = require('./server_helpers')
-const { create_account, get_account_info_payload, check_account, get_account, put_account, get_account_and_user_id } = require('./user_management')
+const { create_account, get_account_info_payload, check_account, get_account, put_account, get_account_and_user_id, get_user_uuid } = require('./user_management')
 const handle_translate = require('./translate')
 const verify_receipt = require('./app_store_receipt_verifier').verify_receipt
 const bodyParser = require('body-parser')
@@ -53,51 +53,83 @@ function config_router(app) {
 
     json_response(res, account_info)
   })
+  
+  // This route is used to get or generate an account UUID to associate with an Apple In-App Purchase (or with other systems that need UUIDs)
+  // It returns the UUID associated with the pubkey, or a new UUID if one is not yet associated
+  router.get('/accounts/:pubkey/account-uuid', required_nip98_auth, async (req, res) => {
+    const pubkey = req.params.pubkey
+    if (!pubkey) {
+      error_response(res, 'Could not parse account pubkey')
+      return
+    }
+    if (pubkey != req.authorized_pubkey) {
+      unauthorized_response(res, 'You are not authorized to access this account')
+      return
+    }
+    json_response(res, { account_uuid: get_user_uuid(app, pubkey) })
+    return
+  })
 
   if (process.env.ENABLE_IAP_PAYMENTS) {
-    router.post('/accounts', required_nip98_auth, (req, res) => {
-      let result = create_account(app, req.authorized_pubkey, null)
-
-      if (result.request_error) {
-        invalid_request(res, result.request_error)
-        return
-      }
-
-      json_response(res, get_account_info_payload(result.user_id, result.account))
-      return
-    })
-
-    // This route is used to verify an app store receipt and extend the expiry date of an account
+    // This route is used to verify an app store receipt and create (or extend the expiry date of) an account
     // This is used for Apple in-app purchases
-    // The receipt should be sent as a binary blob in the request body. 
-    // Make sure to set the Content-Type header to application/octet-stream
-    router.post('/accounts/:pubkey/app-store-receipt', required_nip98_auth, async (req, res) => {
-      const id = req.params.pubkey
-      if (!id) {
-        error_response(res, 'Could not parse account id')
+    // 
+    // Payload should be a JSON object in the following format:
+    // {
+    //    "receipt": <BASE64_ENCODED_RECEIPT>
+    //    "account_uuid": <UUID_OF_ACCOUNT>
+    // }
+    // 
+    // Make sure to set the Content-Type header to application/json
+    router.post('/accounts/:pubkey/apple-iap/app-store-receipt', required_nip98_auth, async (req, res) => {
+      const pubkey = req.params.pubkey
+      if (!pubkey) {
+        invalid_request(res, 'Could not parse account pubkey')
         return
       }
-      if (id != req.authorized_pubkey) {
+      
+      if (pubkey != req.authorized_pubkey) {
         unauthorized_response(res, 'You are not authorized to access this account')
         return
       }
-
-      let account = get_account(app, id)
-
-      if (!account) {
-        simple_response(res, 404)
+      
+      const receipt_base64 = req.body.receipt
+      if (!receipt_base64) {
+        invalid_request(res, 'Missing receipt')
+        return
+      }
+      
+      const alleged_account_uuid = req.body.account_uuid
+      if (!alleged_account_uuid) {
+        invalid_request(res, 'Missing account_uuid')
+        return
+      }
+      
+      const account_uuid = get_user_uuid(app, pubkey)
+      if (account_uuid.toUpperCase() != alleged_account_uuid.toUpperCase()) {
+        unauthorized_response(res, 'The account UUID is not valid for this account. Expected: "' + account_uuid + '", got: "' + alleged_account_uuid + '"')
         return
       }
       
       let expiry_date = await verify_receipt(req.body)
-
       if (!expiry_date) {
         error_response(res, 'Could not verify receipt')
         return
       }
+      
+      let account = get_account(app, pubkey)
+      if (!account) {
+        let result = create_account(app, req.authorized_pubkey, null)
+  
+        if (result.request_error) {
+          invalid_request(res, result.request_error)
+          return
+        }
+        account = result.account
+      }
 
       account.expiry = expiry_date
-      const { user_id } = put_account(app, id, account)
+      const { user_id } = put_account(app, pubkey, account)
       json_response(res, get_account_info_payload(user_id, account))
       return
     })

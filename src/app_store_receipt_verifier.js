@@ -8,7 +8,7 @@ const fs = require('fs')
 /**
  * Verifies the receipt data and returns the expiry date if the receipt is valid.
  *
- * @param {Buffer} receipt_data - The receipt data to verify.
+ * @param {string} receipt_data - The receipt data to verify in base64 format.
  * @returns {Promise<number|null>} The expiry date of the receipt if valid, null otherwise.
  */
 async function verify_receipt(receipt_data) {
@@ -121,12 +121,11 @@ async function fetchTransactionHistory(client, transactionId) {
 /**
  * Extracts the transaction ID from the app receipt.
  * 
- * @param {Buffer} receipt_data - The receipt data to extract the transaction ID from.
+ * @param {string} receipt_data - The receipt data to extract the transaction ID from. (In base64 format)
 */
 function extractTransactionIdFromAppReceipt(receipt_data) {
-  const appReceipt = Buffer.from(receipt_data).toString('base64');
   const receiptUtil = new ReceiptUtility();
-  const transactionId = receiptUtil.extractTransactionIdFromAppReceipt(appReceipt);
+  const transactionId = receiptUtil.extractTransactionIdFromAppReceipt(receipt_data);
   return transactionId;
 }
 
