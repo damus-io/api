@@ -1,5 +1,8 @@
 "use strict";
 // @ts-check
+/**
+ * @typedef {import('@apple/app-store-server-library').JWSTransactionDecodedPayload} JWSTransactionDecodedPayload
+ */
 
 const { AppStoreServerAPIClient, Environment, ReceiptUtility, Order, ProductType, SignedDataVerifier } = require("@apple/app-store-server-library")
 const { current_time } = require("./utils")
@@ -9,9 +12,11 @@ const fs = require('fs')
  * Verifies the receipt data and returns the expiry date if the receipt is valid.
  *
  * @param {string} receipt_data - The receipt data to verify in base64 format.
+ * @param {string} authenticated_account_token - The UUID account token of the user who is authenticated in this request.
+ * 
  * @returns {Promise<number|null>} The expiry date of the receipt if valid, null otherwise.
  */
-async function verify_receipt(receipt_data) {
+async function verify_receipt(receipt_data, authenticated_account_token) {
     // Mocking logic for testing purposes
     if (process.env.MOCK_VERIFY_RECEIPT == "true") {
         return current_time() + 60 * 60 * 24 * 30;
@@ -28,29 +33,47 @@ async function verify_receipt(receipt_data) {
 
     // If the transaction ID is present, fetch the transaction history, verify the transactions, and return the latest expiry date
     if (transactionId != null) {
-        return await fetchLastVerifiedExpiryDate(client, transactionId, rootCaDir, environment, bundleId);
+        return await fetchLastVerifiedExpiryDate(client, transactionId, rootCaDir, environment, bundleId, authenticated_account_token);
     }
     return Promise.resolve(null);
 }
 
 /**
  * Fetches transaction history with the App Store API, verifies the transactions, and returns the last valid expiry date.
+ * It also verifies if the transaction belongs to the account who made the request.
  *
  * @param {AppStoreServerAPIClient} client - The App Store API client.
  * @param {string} transactionId - The transaction ID to fetch history for.
  * @param {string} rootCaDir - The directory containing Apple root CA certificates for verification.
  * @param {Environment} environment - The App Store environment.
  * @param {string} bundleId - The bundle ID of the app.
+ * @param {string} authenticatedAccountToken - The UUID account token of the user who is authenticated in this request.
  
  * @returns {Promise<number|null>} The expiry date (As Unix timestamp measured in seconds) of the receipt if valid, null otherwise.
 */
-async function fetchLastVerifiedExpiryDate(client, transactionId, rootCaDir, environment, bundleId) {
+async function fetchLastVerifiedExpiryDate(client, transactionId, rootCaDir, environment, bundleId, authenticatedAccountToken) {
   const transactions = await fetchTransactionHistory(client, transactionId);
   const rootCAs = readCertificateFiles(rootCaDir);
   const decodedTransactions = await verifyAndDecodeTransactions(transactions, rootCAs, environment, bundleId);
+  const validDecodedTransactions = filterTransactionsThatBelongToAccount(decodedTransactions, authenticatedAccountToken);
+  if (validDecodedTransactions.length === 0) {
+    return null;
+  }
   const expiryDates = decodedTransactions.map((decodedTransaction) => decodedTransaction.expiresDate);
   const latestExpiryDate = Math.max(...expiryDates);
   return latestExpiryDate / 1000; // Return the latest expiry date in seconds
+}
+
+/**
+  * Filters out transactions that do not belong to the authorized account token.
+  *
+  * @param {Array<JWSTransactionDecodedPayload>} transactions - The transactions to filter.
+  * @param {string} authenticatedAccountToken - The UUID account token of the user who is authenticated in this request.
+  *
+  * @returns {Array<JWSTransactionDecodedPayload>} The transactions that belong to the authorized account token.
+  */
+function filterTransactionsThatBelongToAccount(transactions, authenticatedAccountToken) {
+  return transactions.filter((transaction) => transaction.appAccountToken === authenticatedAccountToken);
 }
 
 const certificateCache = new Map();
