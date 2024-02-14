@@ -53,15 +53,23 @@ async function fetchLastVerifiedExpiryDate(client, transactionId, rootCaDir, env
   return latestExpiryDate / 1000; // Return the latest expiry date in seconds
 }
 
+const certificateCache = new Map();
 /**
- * Reads all certificate files from a directory.
- *
- * @param {string} directory - The directory containing certificate files.
- * @returns {Buffer[]} An array of certificate file contents.
- */
+* Reads all certificate files from a directory.
+*
+* @param {string} directory - The directory containing certificate files.
+* @returns {Buffer[]} An array of certificate file contents.
+*/
 function readCertificateFiles(directory) {
     const files = fs.readdirSync(directory);
-    return files.map((fileName) => fs.readFileSync(`${directory}/${fileName}`));
+    return files.map((fileName) => {
+        const filePath = `${directory}/${fileName}`;
+        if (!certificateCache.has(filePath)) {
+            const fileContents = fs.readFileSync(filePath);
+            certificateCache.set(filePath, fileContents);
+        }
+        return certificateCache.get(filePath);
+    });
 }
 
 /**
