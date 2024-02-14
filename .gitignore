@@ -13,3 +13,6 @@ result-4
 # App Store private keys
 *.p8
 apple-root-ca
+
+# macOS Finder
+.DS_Store
