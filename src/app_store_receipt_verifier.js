@@ -73,7 +73,7 @@ async function fetchLastVerifiedExpiryDate(client, transactionId, rootCaDir, env
   * @returns {Array<JWSTransactionDecodedPayload>} The transactions that belong to the authorized account token.
   */
 function filterTransactionsThatBelongToAccount(transactions, authenticatedAccountToken) {
-  return transactions.filter((transaction) => transaction.appAccountToken === authenticatedAccountToken);
+  return transactions.filter((transaction) => transaction.appAccountToken.toUpperCase() === authenticatedAccountToken.toUpperCase());
 }
 
 const certificateCache = new Map();
