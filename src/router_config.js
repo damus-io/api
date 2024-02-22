@@ -113,7 +113,7 @@ function config_router(app) {
       
       let expiry_date = await verify_receipt(receipt_base64, account_uuid)
       if (!expiry_date) {
-        error_response(res, 'Could not verify receipt')
+        unauthorized_response(res, 'Receipt invalid')
         return
       }
       

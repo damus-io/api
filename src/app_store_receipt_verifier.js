@@ -148,8 +148,13 @@ async function fetchTransactionHistory(client, transactionId) {
 */
 function extractTransactionIdFromAppReceipt(receipt_data) {
   const receiptUtil = new ReceiptUtility();
-  const transactionId = receiptUtil.extractTransactionIdFromAppReceipt(receipt_data);
-  return transactionId;
+  try {
+    const transactionId = receiptUtil.extractTransactionIdFromAppReceipt(receipt_data);
+    return transactionId;
+  }
+  catch (error) {
+    return null;
+  }
 }
 
 /**
