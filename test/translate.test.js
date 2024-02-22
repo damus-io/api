@@ -4,7 +4,7 @@ const sinon = require('sinon');
 const nostr = require('nostr');
 const { config_router } = require('../src/router_config');
 const current_time = require('../src/utils').current_time;
-const { supertest_client, TEST_BASE_URL } = require('./utils');
+const { supertest_client, TEST_BASE_URL } = require('./controllers/utils');
 
 
 // MARK: - Tests

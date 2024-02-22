@@ -1,15 +1,23 @@
 const { createHash }  = require('crypto')
 
+// These functions are being defined in an object for easy mocking in tests
+var utils = {
+    current_time: () => {
+        return Math.floor(Date.now() / 1000);
+    }
+}
+
 function hash_sha256(data)
 {
 	return createHash('sha256').update(data).digest().toString('hex');
 }
 
 function current_time() {
-	return Math.floor(Date.now() / 1000);
+	return utils.current_time();
 }
 
 module.exports = {
     hash_sha256,
-    current_time
+    current_time,
+    utils
 }

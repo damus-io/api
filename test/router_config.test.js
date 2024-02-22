@@ -3,7 +3,7 @@ const express = require('express');
 const config_router = require('../src/router_config.js').config_router;
 const nostr = require('nostr');
 const current_time = require('../src/utils.js').current_time;
-const { supertest_client } = require('./utils.js');
+const { supertest_client } = require('./controllers/utils.js');
 
 test('config_router - Account management routes', async (t) => {
   const account_info = {

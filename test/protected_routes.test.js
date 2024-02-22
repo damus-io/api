@@ -4,7 +4,7 @@ const nostr = require('nostr');
 const { current_time, hash_sha256 } = require('../src/utils.js');
 const { capture_raw_body, required_nip98_auth } = require('../src/nip98_auth.js');
 const bodyParser = require('body-parser');
-const { supertest_client } = require('./utils.js');
+const { supertest_client } = require('./controllers/utils.js');
 
 test('Router – Protected POST route should accept valid NIP-98 auth header (include payload)', async (t) => {
   const app = express();

@@ -210,10 +210,15 @@ class PurpleInvoiceManager {
   // Performs an RPC call to the LN node
   async ln_rpc(args) {
     const { method, params } = args
-    const ln = await LNSocket()
+    const ln = await PurpleInvoiceManager.LNSocket()
     ln.genkey()
     await ln.connect_and_init(this.nodeid, this.address)
     return await ln.rpc({ rune: this.rune, method, params })
+  }
+
+  // Convenience function to get the LNSocket instance, in a way that is easy to mock in tests
+  static async LNSocket() {
+    return LNSocket()
   }
 
   // Disconnects from the LN node and stops purging old invoices
