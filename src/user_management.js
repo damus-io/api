@@ -91,6 +91,37 @@ function bump_expiry(api, pubkey, expiry_delta) {
   return { account: account, request_error: null }
 }
 
+/**
+  * Sets the expiry date to a fixed date, but also bumps the expiry date if there is any time left.
+  * It also creates the account if it doesn't exist already.
+  *
+  * @param {Object} api - The API object
+  * @param {string} pubkey - The public key of the user, hex encoded
+  * @param {number} expiry_date - The new expiry date
+*/
+function bumpy_set_expiry(api, pubkey, expiry_date) {
+  const account = get_account(api, pubkey)
+  if (!account) {
+    // Create account if it doesn't exist already
+    return create_account(api, pubkey, expiry_date)
+  }
+  if (!account.expiry) {
+    // Set expiry if it doesn't exist already
+    account.expiry = expiry_date
+  }
+  else if (account.expiry < current_time()) {
+    // Set new expiry if it has already expired
+    account.expiry = expiry_date
+  }
+  else if (account.expiry >= current_time()) {
+    // Accumulate expiry if it hasn't expired yet
+    const remaining_time = account.expiry - current_time()
+    account.expiry = expiry_date + remaining_time
+  }
+  put_account(api, pubkey, account)
+  return { account: account, request_error: null }
+}
+
 function get_account_info_payload(subscriber_number, account) {
   if (!account)
     return null
@@ -121,4 +152,4 @@ function get_user_uuid(api, pubkey) {
   return uuid
 }
 
-module.exports = { check_account, create_account, get_account_info_payload, bump_expiry, get_account, put_account, get_account_and_user_id, get_user_id_from_pubkey, get_user_uuid }
+module.exports = { check_account, create_account, get_account_info_payload, bump_expiry, get_account, put_account, get_account_and_user_id, get_user_id_from_pubkey, get_user_uuid, bumpy_set_expiry }
