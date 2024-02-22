@@ -199,11 +199,16 @@ class PurpleInvoiceManager {
   async check_invoice_is_paid(label) {
     try {
       const params = { label }
-      const res = await this.ln_rpc({ method: "waitinvoice", params })
-      return res.error ? false : true
+      return new Promise(async (resolve, reject) => {
+        setTimeout(() => {
+          resolve(undefined)
+        }, parseInt(process.env.LN_INVOICE_CHECK_TIMEOUT_MS) || 60000)
+        const res = await this.ln_rpc({ method: "waitinvoice", params })
+        resolve(res.error ? false : true)
+      })
     }
     catch {
-      return false
+      return undefined
     }
   }
 

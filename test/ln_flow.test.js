@@ -96,3 +96,58 @@ test('LN Flow — Expected flow', async (t) => {
 
   t.end();
 });
+
+test('LN Flow — Account not active if payment is not complete', async (t) => {
+  // Initialize the PurpleTestController
+  const purple_api_controller = await PurpleTestController.new(t);
+
+  // Instantiate a new client
+  const user_pubkey_1 = purple_api_controller.new_client();
+
+  // Get the account info
+  const response = await purple_api_controller.clients[user_pubkey_1].get_account();
+
+  t.same(response.statusCode, 404);
+
+  // Get products
+  const products_response = await purple_api_controller.clients[user_pubkey_1].get_products();
+  t.same(products_response.statusCode, 200);
+
+  // Start a new checkout
+  const new_checkout_response = await purple_api_controller.clients[user_pubkey_1].new_checkout(PURPLE_ONE_MONTH);
+  t.same(new_checkout_response.statusCode, 200);
+  
+  // Verify the checkout
+  const verify_checkout_response = await purple_api_controller.clients[user_pubkey_1].verify_checkout(new_checkout_response.body.id);
+  t.same(verify_checkout_response.statusCode, 200);
+  
+  // **DO NOT PAY FOR INVOICE**
+  
+  // Ask the server to check the invoice status even without paying
+  try {
+    const res = await purple_api_controller.clients[user_pubkey_1].check_invoice(
+      new_checkout_response.body.id, 
+      { timeout: { response: 2000, deadline: 2000 } }
+    );
+  
+    t.same(res.statusCode, 200);
+    t.same(res.body.invoice?.paid, undefined);
+    t.same(res.body.completed, false);
+  } catch (err) {
+    if (err.timeout) {
+      /* timed out! */
+      console.log("timeout");
+    } else { 
+      /* other error */
+      throw err;
+    }
+  }
+  
+  
+  // Read the account info now
+  const account_info_response = await purple_api_controller.clients[user_pubkey_1].get_account();
+  t.same(account_info_response.statusCode, 404);
+
+  t.end();
+  return;
+});

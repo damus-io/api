@@ -25,7 +25,7 @@ class PurpleTestController {
     this.purple_api = this.PurpleApi()
     this.purple_api.register_routes()
     this.test_request = null  // Will be set in connect_and_init
-    this.mock_ln_node_controller = new this.MockLNNodeController(24 * 60 * 60)  // 24 hours expiry
+    this.mock_ln_node_controller = new this.MockLNNodeController(t, 24 * 60 * 60)  // 24 hours expiry for the invoices
     /**
      * This is a list of clients that can be used to interact with the test Purple API
      * @type {Record<string, PurpleTestClient>}
@@ -42,6 +42,7 @@ class PurpleTestController {
     process.env.LN_WS_PROXY = 'ln_ws_proxy'
     process.env.DEEPL_KEY = 'deepl_key'
     process.env.ENABLE_HTTP_AUTH = 'true' // Enable HTTP auth for tests
+    process.env.LN_INVOICE_CHECK_TIMEOUT_MS = '5000'
   }
 
   setup_stubs() {

@@ -7,7 +7,7 @@ const { hash_sha256, current_time } = require('../../src/utils.js');
 
 class PurpleTestClient {
   // MARK: - Initializers
-  
+
   /**
    * Initializes the PurpleTestClient
    * 
@@ -24,16 +24,16 @@ class PurpleTestClient {
     this.public_key = nostr.getPublicKey(this.private_key)
   }
 
-  
+
   // MARK: - Client high-level functions
-  
+
   /**
      * Gets the account information for the current public key.
      * 
      * @param {PurpleTestClientRequestOptions} options - The request options
      * @returns {Promise<Object>} The account information
      */
-  async get_account(options={}) {
+  async get_account(options = {}) {
     options = PurpleTestClient.patch_options({ nip98_authenticated: true }, options)
     return await this.get('/accounts/' + this.public_key, options)
   }
@@ -44,7 +44,7 @@ class PurpleTestClient {
    * @param {PurpleTestClientRequestOptions} options - The request options
    * @returns {Promise<Object>} The product information
    */
-  async get_products(options={}) {
+  async get_products(options = {}) {
     return await this.get('/products', options)
   }
 
@@ -55,11 +55,11 @@ class PurpleTestClient {
      * @param {PurpleTestClientRequestOptions} options - The request options
      * @returns {Promise<Object>} The result of the checkout creation
      */
-  async new_checkout(product_template_name, options={}) {
+  async new_checkout(product_template_name, options = {}) {
     options = PurpleTestClient.patch_options({ nip98_authenticated: true, content_type: 'application/json' }, options)
     return await this.post('/ln-checkout',
       { product_template_name: product_template_name },
-      { 
+      {
         nip98_authenticated: false,
         content_type: 'application/json'
       }
@@ -73,7 +73,7 @@ class PurpleTestClient {
    * @param {PurpleTestClientRequestOptions} options - The request options
    * @returns {Promise<Object>} The checkout information
    */
-  async get_checkout(checkout_id, options={}) {
+  async get_checkout(checkout_id, options = {}) {
     return await this.get('/ln-checkout/' + checkout_id, options)
   }
 
@@ -84,7 +84,7 @@ class PurpleTestClient {
    * @param {PurpleTestClientRequestOptions} options - The request options
    * @returns {Promise<Object>} The result of the checkout verification
    */
-  async verify_checkout(checkout_id, options={}) {
+  async verify_checkout(checkout_id, options = {}) {
     options = PurpleTestClient.patch_options({ nip98_authenticated: true }, options)
     return await this.put('/ln-checkout/' + checkout_id + '/verify', null, options)
   }
@@ -96,7 +96,7 @@ class PurpleTestClient {
    * @param {PurpleTestClientRequestOptions} options - The request options
    * @returns {Promise<Object>} The result of the invoice check
    */
-  async check_invoice(checkout_id, options={}) {
+  async check_invoice(checkout_id, options = {}) {
     options = PurpleTestClient.patch_options({}, options)
     return await this.post('/ln-checkout/' + checkout_id + '/check-invoice', null, options)
   }
@@ -109,7 +109,7 @@ class PurpleTestClient {
    * @param {PurpleTestClientRequestOptions} options - The request options.
    * @returns {Promise<Object>} The response from the server.
    */
-  async get(path, options={}) {
+  async get(path, options = {}) {
     return await this.make_request('GET', path, null, options)
   }
 
@@ -121,7 +121,7 @@ class PurpleTestClient {
    * @param {PurpleTestClientRequestOptions} options - The request options.
    * @returns {Promise<Object>} The response from the server.
    */
-  async post(path, body, options={}) {
+  async post(path, body, options = {}) {
     return await this.make_request('POST', path, body, options)
   }
 
@@ -133,7 +133,7 @@ class PurpleTestClient {
      * @param {PurpleTestClientRequestOptions} options - The request options.
      * @returns {Promise<Object>} The response from the server.
      */
-  async put(path, body, options={}) {
+  async put(path, body, options = {}) {
     return await this.make_request('PUT', path, body, options)
   }
 
@@ -149,7 +149,7 @@ class PurpleTestClient {
    * @param {PurpleTestClientRequestOptions} options - The request options
    * @returns {Promise<Object>} The response from the server
    */
-  async make_request(method, path, body, options={}) {
+  async make_request(method, path, body, options = {}) {
     var request = this.request
     if (method === 'GET') {
       request = request.get(path)
@@ -245,6 +245,7 @@ class PurpleTestClient {
  * 
  * @property {boolean} [nip98_authenticated] - Whether the request should be authenticated with NIP98
  * @property {string} [content_type] - The content type of the request
+ * @property {{ response: number, deadline: number }} [timeout] - The timeout of the request
  * 
 */
 

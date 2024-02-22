@@ -37,6 +37,7 @@ The Damus API backend for Damus Purple and other functionality.
 - `CORS_ALLOWED_ORIGINS` (optional): Comma separated list of allowed origins for CORS. Generally only needed for testing or staging.
 - `ALLOW_HTTP_AUTH`: Set to `"true"` to enable HTTP basic auth for all endpoints. (Useful for testing locally, otherwise it forces HTTPS)
 - `ADMIN_PASSWORD`: Password for admin API endpoints (optional, leaving this blank will disable admin endpoints)
+- `LN_INVOICE_CHECK_TIMEOUT_MS`: Timeout in milliseconds for checking the status of a Lightning Network invoice. Defaults to 60000 (60 seconds), and shorter for tests
 
 ## npm scripts
 

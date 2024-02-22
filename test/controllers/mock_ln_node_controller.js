@@ -9,13 +9,20 @@ class MockLNNodeController {
   /**
    * Initializes the MockLNNodeController
    * 
+   * @param {Object} t - The test object from Node tap
    * @param {number} invoice_expiry_period - The period of time in seconds that generated invoices are valid for
    */
-  constructor(invoice_expiry_period) {
+  constructor(t, invoice_expiry_period) {
     this.invoice_expiry_period = invoice_expiry_period
     this.control_invoice_should_fail = false
     this.invoices = {}
     this.bolt11_to_label = {}
+    this.open_intervals = []
+    t.teardown(() => {
+      this.open_intervals.forEach((interval) => {
+        clearInterval(interval)
+      })
+    });
   }
 
   // MARK: - Control functions
@@ -137,10 +144,10 @@ class MockLNNodeController {
           })
         }
       }, 1000)  // Check every second
+      this.open_intervals.push(interval)
     })
   }
 }
-
 
 // MARK: - Type definitions
 
