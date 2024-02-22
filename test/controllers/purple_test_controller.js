@@ -51,19 +51,30 @@ class PurpleTestController {
     const mock_ln_socket = () => {
       return Promise.resolve(this.mock_ln_node_controller)
     }
+    
+    this.MockIAPController = this.t.mockRequire('./mock_iap_controller.js', {
+      '../../src/utils.js': { ...require('../../src/utils.js'), current_time: this.current_time.bind(this) },
+      'lnsocket': mock_ln_socket,
+    }).MockIAPController;
+    
+    this.iap = new this.MockIAPController()
 
     this.PurpleApi = this.t.mockRequire('../../src/index.js', {
-      '../../src/utils.js': { current_time: this.current_time.bind(this) },
-      'lnsocket': mock_ln_socket
+      '../../src/utils.js': { ...require('../../src/utils.js'), current_time: this.current_time.bind(this) },
+      'lnsocket': mock_ln_socket,
+      '@apple/app-store-server-library': {
+        ...require('@apple/app-store-server-library'),
+        AppStoreServerAPIClient: this.iap.generate_app_store_server_api_client()
+      }
     })
 
     this.MockLNNodeController = this.t.mockRequire('./mock_ln_node_controller.js', {
-      '../../src/utils.js': { current_time: this.current_time.bind(this) },
+      '../../src/utils.js': { ...require('../../src/utils.js'), current_time: this.current_time.bind(this) },
       'lnsocket': mock_ln_socket
-    }).MockLNNodeController;
+    }).MockLNNodeController;        
 
     this.PurpleTestClient = this.t.mockRequire('./purple_test_client.js', {
-      '../../src/utils.js': { current_time: this.current_time.bind(this) },
+      '../../src/utils.js': { ...require('../../src/utils.js'), current_time: this.current_time.bind(this) },
       'lnsocket': mock_ln_socket
     }).PurpleTestClient;
   }
@@ -161,6 +172,19 @@ class PurpleTestController {
     this.mock_ln_node_controller.simulate_pay_for_invoice(verify_checkout_response.body.invoice?.bolt11);
     const check_invoice_status_response = await this.clients[pubkey].check_invoice(verify_checkout_response.body.id);
     this.t.same(check_invoice_status_response.status, 200)
+  }
+  
+  
+  // MARK: - Account UUID control
+  
+  /**
+    * Sets the account UUID for a public key
+    *
+    * @param {string} pubkey - The public key of the user
+    * @param {string} account_uuid - The account UUID to set for the user
+    */
+  set_account_uuid(pubkey, account_uuid) {
+    this.purple_api.dbs.pubkeys_to_user_uuids.put(pubkey, account_uuid)
   }
 }
 

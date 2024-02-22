@@ -100,7 +100,22 @@ class PurpleTestClient {
     options = PurpleTestClient.patch_options({}, options)
     return await this.post('/ln-checkout/' + checkout_id + '/check-invoice', null, options)
   }
-
+  
+  /**
+    * Sends an IAP (Apple In-app purchase) receipt to the server.
+    *
+    * @param {string} user_uuid - The UUID of the user
+    * @param {string} receipt_base64 - The base64 encoded receipt
+    * @param {PurpleTestClientRequestOptions} options - The request options
+    * @returns {Promise<Object>} The response from the server
+    */
+  async send_iap_receipt(user_uuid, receipt_base64, options = {}) {
+    options = PurpleTestClient.patch_options({ nip98_authenticated: true, content_type: 'application/json' }, options)
+    return await this.post(`/accounts/${this.public_key}/apple-iap/app-store-receipt`, {
+      account_uuid: user_uuid,
+      receipt: receipt_base64
+    }, options)
+  }
 
   /**
    * Sends a GET request to the server.
@@ -188,20 +203,26 @@ class PurpleTestClient {
      */
   async get_nip98_auth_header(method, path, body) {
     let full_query_url = this.base_url + path
-    var body_hash = ''
+    var body_hash = undefined
     if (body !== null && body !== undefined) {
       body_hash = hash_sha256(JSON.stringify(body))
     }
-
+    
+    var tags = [
+      ["u", full_query_url],
+      ["method", method]
+    ];
+    
+    if (body_hash !== undefined) {
+      tags.push(["payload", body_hash])
+    }
+    
     let auth_note_template = {
       pubkey: this.public_key,
       created_at: current_time(),
       kind: 27235,
-      tags: [
-        ["u", full_query_url],
-        ["method", method],
-      ],
-      content: body_hash
+      tags: tags,
+      content: ''
     }
 
     let auth_note_id = await nostr.calculateId(auth_note_template);
