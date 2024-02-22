@@ -79,8 +79,12 @@ function bump_expiry(api, pubkey, expiry_delta) {
     // Set expiry if it doesn't exist already
     account.expiry = current_time() + expiry_delta
   }
-  else {
-    // Bump expiry if it already exists
+  else if (account.expiry < current_time()) {
+    // Set new expiry if it has already expired
+    account.expiry = current_time() + expiry_delta
+  }
+  else if (account.expiry >= current_time()) {
+    // Accumulate expiry if it hasn't expired yet
     account.expiry += expiry_delta
   }
   put_account(api, pubkey, account)

@@ -151,3 +151,56 @@ test('LN Flow — Account not active if payment is not complete', async (t) => {
   t.end();
   return;
 });
+
+test('LN Flow — Renewals, expiration and expiry bumping', async (t) => {
+  // Initialize the PurpleTestController
+  const purple_api_controller = await PurpleTestController.new(t);
+  purple_api_controller.set_current_time(1706659200)  // 2024-01-31 00:00:00 UTC
+
+  // Instantiate a new client
+  const user_pubkey_1 = purple_api_controller.new_client();
+  
+  const initial_account_info_response = await purple_api_controller.clients[user_pubkey_1].get_account();
+  t.same(initial_account_info_response.statusCode, 404);
+
+  // Buy a one month subscription
+  await purple_api_controller.ln_flow_buy_subscription(user_pubkey_1, PURPLE_ONE_MONTH);
+  
+  // Check expiry
+  const account_info_response_1 = await purple_api_controller.clients[user_pubkey_1].get_account();
+  t.same(account_info_response_1.statusCode, 200);
+  t.same(account_info_response_1.body.expiry, purple_api_controller.current_time() + 30 * 24 * 60 * 60);
+  t.same(account_info_response_1.body.active, true);
+  
+  // Move time forward by 35 days, and make sure the account is not active anymore
+  purple_api_controller.set_current_time(purple_api_controller.current_time() + 35 * 24 * 60 * 60);
+  const account_info_response_2 = await purple_api_controller.clients[user_pubkey_1].get_account();
+  t.same(account_info_response_2.statusCode, 200);
+  t.same(account_info_response_2.body.active, false);
+  
+  // Buy a one month subscription again
+  await purple_api_controller.ln_flow_buy_subscription(user_pubkey_1, PURPLE_ONE_MONTH);
+  
+  // Check expiry
+  const account_info_response_3 = await purple_api_controller.clients[user_pubkey_1].get_account();
+  t.same(account_info_response_3.statusCode, 200);
+  t.same(account_info_response_3.body.expiry, purple_api_controller.current_time() + 30 * 24 * 60 * 60);
+  t.same(account_info_response_3.body.active, true);
+  
+  // Move time forward by 25 days, and make sure the account is still active
+  purple_api_controller.set_current_time(purple_api_controller.current_time() + 25 * 24 * 60 * 60);
+  const account_info_response_4 = await purple_api_controller.clients[user_pubkey_1].get_account();
+  t.same(account_info_response_4.statusCode, 200);
+  t.same(account_info_response_4.body.active, true);
+  
+  // Buy another one month subscription again
+  await purple_api_controller.ln_flow_buy_subscription(user_pubkey_1, PURPLE_ONE_MONTH);
+  
+  // Check expiry and make sure it's 35 days from now
+  const account_info_response_5 = await purple_api_controller.clients[user_pubkey_1].get_account();
+  t.same(account_info_response_5.statusCode, 200);
+  t.same(account_info_response_5.body.expiry, purple_api_controller.current_time() + 35 * 24 * 60 * 60);
+  t.same(account_info_response_5.body.active, true);
+  
+  t.end();
+});

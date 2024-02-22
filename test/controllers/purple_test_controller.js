@@ -144,6 +144,24 @@ class PurpleTestController {
     return client.public_key
   }
   
+  
+  // MARK: - High-level client control
+  
+  /**
+   * Does the LN flow for buying a subscription normally.
+   * 
+   * @param {string} pubkey - The public key of the client
+   * @param {string} product_template_name - The name of the product template
+   */
+  async ln_flow_buy_subscription(pubkey, product_template_name) {
+    const new_checkout_response = await this.clients[pubkey].new_checkout(product_template_name);
+    this.t.same(new_checkout_response.status, 200)
+    const verify_checkout_response = await this.clients[pubkey].verify_checkout(new_checkout_response.body.id);
+    this.t.same(verify_checkout_response.status, 200)
+    this.mock_ln_node_controller.simulate_pay_for_invoice(verify_checkout_response.body.invoice?.bolt11);
+    const check_invoice_status_response = await this.clients[pubkey].check_invoice(verify_checkout_response.body.id);
+    this.t.same(check_invoice_status_response.status, 200)
+  }
 }
 
 module.exports = { PurpleTestController }
