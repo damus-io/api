@@ -7,6 +7,7 @@
 const { AppStoreServerAPIClient, Environment, ReceiptUtility, Order, ProductType, SignedDataVerifier } = require("@apple/app-store-server-library")
 const { current_time } = require("./utils")
 const fs = require('fs')
+const debug = require('debug')('iap')
 
 /**
  * Verifies the receipt data and returns the expiry date if the receipt is valid.
@@ -17,8 +18,10 @@ const fs = require('fs')
  * @returns {Promise<number|null>} The expiry date of the receipt if valid, null otherwise.
  */
 async function verify_receipt(receipt_data, authenticated_account_token) {
+    debug("Verifying receipt with authenticated account token: %s", authenticated_account_token);
     // Mocking logic for testing purposes
     if (process.env.MOCK_VERIFY_RECEIPT == "true") {
+        debug("Mocking verify_receipt with expiry date 30 days from now");
         return current_time() + 60 * 60 * 24 * 30;
     }
 
@@ -30,6 +33,7 @@ async function verify_receipt(receipt_data, authenticated_account_token) {
     
     // Get the transaction ID from the receipt
     const transactionId = extractTransactionIdFromAppReceipt(receipt_data);
+    debug("[Account token: %s] Transaction ID extracted from the receipt: %s", authenticated_account_token, transactionId);
 
     // If the transaction ID is present, fetch the transaction history, verify the transactions, and return the latest expiry date
     if (transactionId != null) {
@@ -53,14 +57,19 @@ async function verify_receipt(receipt_data, authenticated_account_token) {
 */
 async function fetchLastVerifiedExpiryDate(client, transactionId, rootCaDir, environment, bundleId, authenticatedAccountToken) {
   const transactions = await fetchTransactionHistory(client, transactionId);
+  debug("[Account token: %s] Fetched transaction history for transaction ID: %s; Found %d transactions", authenticatedAccountToken, transactionId, transactions.length);
   const rootCAs = readCertificateFiles(rootCaDir);
   const decodedTransactions = await verifyAndDecodeTransactions(transactions, rootCAs, environment, bundleId);
+  debug("[Account token: %s] Verified and decoded %d transactions", authenticatedAccountToken, decodedTransactions.length);
   const validDecodedTransactions = filterTransactionsThatBelongToAccount(decodedTransactions, authenticatedAccountToken);
+  debug("[Account token: %s] Filtered transactions that belong to the account UUID. Found %d matching transactions", authenticatedAccountToken, validDecodedTransactions.length);
   if (validDecodedTransactions.length === 0) {
     return null;
   }
   const expiryDates = decodedTransactions.map((decodedTransaction) => decodedTransaction.expiresDate);
+  debug("[Account token: %s] Found expiry dates: %o", authenticatedAccountToken, expiryDates);
   const latestExpiryDate = Math.max(...expiryDates);
+  debug("[Account token: %s] Latest expiry date: %d", authenticatedAccountToken, latestExpiryDate);
   return latestExpiryDate / 1000; // Return the latest expiry date in seconds
 }
 
@@ -73,7 +82,12 @@ async function fetchLastVerifiedExpiryDate(client, transactionId, rootCaDir, env
   * @returns {Array<JWSTransactionDecodedPayload>} The transactions that belong to the authorized account token.
   */
 function filterTransactionsThatBelongToAccount(transactions, authenticatedAccountToken) {
-  return transactions.filter((transaction) => transaction.appAccountToken.toUpperCase() === authenticatedAccountToken.toUpperCase());
+  return transactions.filter((transaction) => {
+    const txToken = transaction.appAccountToken.toUpperCase();
+    const authAccountToken = authenticatedAccountToken.toUpperCase();
+    debug("Comparing transaction account token: %s with authenticated account token: %s", txToken, authAccountToken);
+    return txToken === authAccountToken;
+  })
 }
 
 const certificateCache = new Map();

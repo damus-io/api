@@ -38,6 +38,7 @@ The Damus API backend for Damus Purple and other functionality.
 - `ALLOW_HTTP_AUTH`: Set to `"true"` to enable HTTP basic auth for all endpoints. (Useful for testing locally, otherwise it forces HTTPS)
 - `ADMIN_PASSWORD`: Password for admin API endpoints (optional, leaving this blank will disable admin endpoints)
 - `LN_INVOICE_CHECK_TIMEOUT_MS`: Timeout in milliseconds for checking the status of a Lightning Network invoice. Defaults to 60000 (60 seconds), and shorter for tests
+- `ENABLE_DEBUG_ENDPOINTS`: Set to `"true"` to enable debug endpoints (for testing or staging only). This includes endpoints to delete users or force UUIDs.
 
 ## npm scripts
 
@@ -46,3 +47,18 @@ The Damus API backend for Damus Purple and other functionality.
 - `npm test`: Run the unit tests
 - `npm run type-check`: Run a type check on all files in the project
 - `npm run type-check-path -- <path>`: Run a type check on a specific file or directory
+
+## Testing and debugging tips
+
+### IAP (Apple In-app Purchase) receipt verification
+
+- Run the server with `DEBUG=iap` to see verbose debug logs for the IAP receipt verification process. You can also use those logs to find which UUID an IAP is associated with.
+- If you need to force a specific UUID for a user (e.g. when you reset the db but can't reset your Sandbox IAP history), you can enable the `ENABLE_DEBUG_ENDPOINTS` environment variable and use this debug endpoint to force a UUID for a user:
+  ```
+```bash
+curl -X PUT http://<HOST_AND_PORT>/admin/users/<PUBKEY_HEX_FORMAT>/account-uuid \
+     -H "Content-Type: application/json" \
+     -d '{"admin_password": "<ADMIN_PASSWORD_SET_ON_THE_RESPECTIVE_ENV_VARIABLE>", "account_uuid": "<UUID_FOUND_ON_IAP_TRANSACTION>"}'
+```
+
+

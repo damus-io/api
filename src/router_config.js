@@ -1,5 +1,5 @@
 const { json_response, simple_response, error_response, invalid_request, unauthorized_response } = require('./server_helpers')
-const { create_account, get_account_info_payload, check_account, get_account, put_account, get_account_and_user_id, get_user_uuid, bumpy_set_expiry } = require('./user_management')
+const { create_account, get_account_info_payload, check_account, get_account, put_account, get_account_and_user_id, get_user_uuid, bumpy_set_expiry, delete_account } = require('./user_management')
 const handle_translate = require('./translate')
 const verify_receipt = require('./app_store_receipt_verifier').verify_receipt
 const bodyParser = require('body-parser')
@@ -293,7 +293,77 @@ function config_router(app) {
     }
     json_response(res, new_checkout_object)
   })
-
+  
+  if (process.env.ENABLE_DEBUG_ENDPOINTS == "true") {
+    /**
+      * This route is used to delete a user account.
+      * This is useful when testing the onboarding flow, and we need to reset the user's account.
+    */
+    router.delete('/admin/users/:pubkey', async (req, res) => {
+      const pubkey = req.params.pubkey
+      const body = req.body
+      const admin_password = body.admin_password
+      if(!process.env.ADMIN_PASSWORD) {
+        unauthorized_response(res, 'Admin password not set in the environment variables')
+        return
+      }
+      if (!admin_password) {
+        unauthorized_response(res, 'Missing admin_password')
+        return
+      }
+      if (admin_password != process.env.ADMIN_PASSWORD) {
+        unauthorized_response(res, 'Invalid admin password')
+        return
+      }
+      if (!pubkey) {
+        invalid_request(res, 'Missing pubkey')
+        return
+      }
+      const { delete_error } = delete_account(app, pubkey)
+      if (delete_error) {
+        invalid_request(res, { error: delete_error })
+        return
+      }
+      
+      json_response(res, { success: true })
+    })
+    
+    /**
+      * This route is used to force a specific UUID for a user account.
+      *
+      * This is useful when we accidentally nuke the db on staging, 
+      * but we want to keep the user's account UUID the same as before because resetting Apple's Sandbox account is a pain.
+    */
+    router.put('/admin/users/:pubkey/account-uuid', async (req, res) => {
+      const pubkey = req.params.pubkey
+      const body = req.body
+      const admin_password = body.admin_password
+      const account_uuid = body.account_uuid
+      if(!process.env.ADMIN_PASSWORD) {
+        unauthorized_response(res, 'Admin password not set in the environment variables')
+        return
+      }
+      if (!admin_password) {
+        unauthorized_response(res, 'Missing admin_password')
+        return
+      }
+      if (admin_password != process.env.ADMIN_PASSWORD) {
+        unauthorized_response(res, 'Invalid admin password')
+        return
+      }
+      if (!pubkey) {
+        invalid_request(res, 'Missing pubkey')
+        return
+      }
+      if (!account_uuid) {
+        invalid_request(res, 'Missing account_uuid')
+        return
+      }
+      app.dbs.pubkeys_to_user_uuids.put(pubkey, account_uuid.toUpperCase())
+      
+      json_response(res, { success: true })
+    });
+  }
 }
 
 function get_allowed_cors_origins() {

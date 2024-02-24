@@ -152,4 +152,17 @@ function get_user_uuid(api, pubkey) {
   return uuid
 }
 
-module.exports = { check_account, create_account, get_account_info_payload, bump_expiry, get_account, put_account, get_account_and_user_id, get_user_id_from_pubkey, get_user_uuid, bumpy_set_expiry }
+function delete_account(api, pubkey) {
+  const user_id = get_user_id_from_pubkey(api, pubkey);
+  if (!user_id) {
+    return { delete_error: 'User ID not found for the given pubkey' };
+  }
+
+  api.dbs.accounts.remove(user_id);
+  api.dbs.pubkeys_to_user_ids.remove(pubkey);
+  api.dbs.pubkeys_to_user_uuids.remove(pubkey);
+
+  return { delete_error: null };
+}
+
+module.exports = { check_account, create_account, get_account_info_payload, bump_expiry, get_account, put_account, get_account_and_user_id, get_user_id_from_pubkey, get_user_uuid, bumpy_set_expiry, delete_account }
