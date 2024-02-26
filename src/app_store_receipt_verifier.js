@@ -7,7 +7,7 @@
 const { AppStoreServerAPIClient, Environment, ReceiptUtility, Order, ProductType, SignedDataVerifier } = require("@apple/app-store-server-library")
 const { current_time } = require("./utils")
 const fs = require('fs')
-const debug = require('debug')('iap')
+const debug = require('debug')('api:iap')
 
 /**
  * Verifies the receipt data and returns the expiry date if the receipt is valid.
