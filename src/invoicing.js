@@ -138,7 +138,7 @@ class PurpleInvoiceManager {
   // Checks the status of the invoice associated with the given checkout object directly with the LN node, and handles successful payments.
   async check_checkout_object_invoice(checkout_id) {
     const checkout_object = await this.get_checkout_object(checkout_id)
-    if (checkout_object.invoice) {
+    if (checkout_object?.invoice) {
       checkout_object.invoice.paid = await this.check_invoice_is_paid(checkout_object.invoice.label)
       if (checkout_object.invoice.paid) {
         this.handle_successful_payment(checkout_object.invoice.bolt11)
