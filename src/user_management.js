@@ -99,7 +99,7 @@ function bump_expiry(api, pubkey, expiry_delta) {
   * @param {string} pubkey - The public key of the user, hex encoded
   * @param {number} expiry_date - The new expiry date
 */
-function bumpy_set_expiry(api, pubkey, expiry_date) {
+function bump_iap_set_expiry(api, pubkey, expiry_date) {
   const account = get_account(api, pubkey)
   if (!account) {
     // Create account if it doesn't exist already
@@ -165,4 +165,4 @@ function delete_account(api, pubkey) {
   return { delete_error: null };
 }
 
-module.exports = { check_account, create_account, get_account_info_payload, bump_expiry, get_account, put_account, get_account_and_user_id, get_user_id_from_pubkey, get_user_uuid, bumpy_set_expiry, delete_account }
+module.exports = { check_account, create_account, get_account_info_payload, bump_expiry, get_account, put_account, get_account_and_user_id, get_user_id_from_pubkey, get_user_uuid, bump_iap_set_expiry, delete_account }

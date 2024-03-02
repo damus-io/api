@@ -1,5 +1,5 @@
 const { json_response, simple_response, error_response, invalid_request, unauthorized_response } = require('./server_helpers')
-const { create_account, get_account_info_payload, check_account, get_account, put_account, get_account_and_user_id, get_user_uuid, bumpy_set_expiry, delete_account } = require('./user_management')
+const { create_account, get_account_info_payload, check_account, get_account, put_account, get_account_and_user_id, get_user_uuid, bump_iap_set_expiry, delete_account } = require('./user_management')
 const handle_translate = require('./translate')
 const verify_receipt = require('./app_store_receipt_verifier').verify_receipt
 const bodyParser = require('body-parser')
@@ -117,7 +117,7 @@ function config_router(app) {
         return
       }
       
-      const { account: new_account, request_error } = bumpy_set_expiry(app, req.authorized_pubkey, expiry_date)
+      const { account: new_account, request_error } = bump_iap_set_expiry(app, req.authorized_pubkey, expiry_date)
       if (request_error) {
         error_response(res, request_error)
         return
