@@ -363,6 +363,47 @@ function config_router(app) {
       
       json_response(res, { success: true })
     });
+    
+    /**
+      * This route is used to force a specific expiry date for a user account.
+      *
+      * This is useful for testing
+    */
+    router.put('/admin/users/:pubkey/expiry', async (req, res) => {
+      const pubkey = req.params.pubkey
+      const body = req.body
+      const admin_password = body.admin_password
+      const expiry = body.expiry  // Unix timestamp in seconds
+      if(!process.env.ADMIN_PASSWORD) {
+        unauthorized_response(res, 'Admin password not set in the environment variables')
+        return
+      }
+      if (!admin_password) {
+        unauthorized_response(res, 'Missing admin_password')
+        return
+      }
+      if (admin_password != process.env.ADMIN_PASSWORD) {
+        unauthorized_response(res, 'Invalid admin password')
+        return
+      }
+      if (!pubkey) {
+        invalid_request(res, 'Missing pubkey')
+        return
+      }
+      if (!expiry) {
+        invalid_request(res, 'Missing expiry')
+        return
+      }
+      const { account, user_id } = get_account_and_user_id(app, pubkey)
+      if (!account) {
+        invalid_request(res, 'No account found for pubkey: ' + pubkey)
+        return
+      }
+      account.expiry = expiry
+      put_account(app, pubkey, account)
+      
+      json_response(res, { success: true })
+    });
   }
 }
 
