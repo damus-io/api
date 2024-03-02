@@ -146,10 +146,15 @@ async function fetchTransactionHistory(client, transactionId) {
     let transactions = [];
     do {
         const revisionToken = response !== null && response.revision !== null ? response.revision : null;
-        response = await client.getTransactionHistory(transactionId, revisionToken, transactionHistoryRequest);
-        if (response.signedTransactions) {
-            transactions = transactions.concat(response.signedTransactions);
-            continue;
+        try {
+          response = await client.getTransactionHistory(transactionId, revisionToken, transactionHistoryRequest);
+          if (response.signedTransactions) {
+              transactions = transactions.concat(response.signedTransactions);
+              continue;
+          }
+        } catch (error) {
+          debug("Error fetching IAP transaction history due to an error: %o", error);
+          break;
         }
     } while (response.hasMore);
     return transactions;
