@@ -43,6 +43,13 @@ class PurpleTestController {
     process.env.DEEPL_KEY = 'deepl_key'
     process.env.ENABLE_HTTP_AUTH = 'true' // Enable HTTP auth for tests
     process.env.LN_INVOICE_CHECK_TIMEOUT_MS = '5000'
+    process.env.ENABLE_IAP_PAYMENTS = "true"
+    process.env.MOCK_VERIFY_RECEIPT = false
+    process.env.IAP_ISSUER_ID = "MOCK"
+    process.env.IAP_KEY_ID = "MOCK"
+    process.env.IAP_BUNDLE_ID = "com.jb55.damus2"
+    process.env.IAP_PRIVATE_KEY_PATH = "./test_utils/mock.p8"
+    process.env.IAP_ENVIRONMENT = "Sandbox"
   }
 
   setup_stubs() {
