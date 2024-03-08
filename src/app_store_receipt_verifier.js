@@ -43,6 +43,36 @@ async function verify_receipt(receipt_data, authenticated_account_token) {
 }
 
 /**
+ * Verifies the transaction id and returns the expiry date if the transaction is valid.
+ *
+ * @param {number} transaction_id - The transaction id to verify.
+ * @param {string} authenticated_account_token - The UUID account token of the user who is authenticated in this request.
+ *
+ * @returns {Promise<number|null>} The expiry date of the receipt if valid, null otherwise.
+ */
+async function verify_transaction_id(transaction_id, authenticated_account_token) {
+    debug("Verifying transaction id '%d' with authenticated account token: %s", transaction_id, authenticated_account_token);
+    // Mocking logic for testing purposes
+    if (process.env.MOCK_VERIFY_RECEIPT == "true") {
+        debug("Mocking verify_receipt with expiry date 30 days from now");
+        return current_time() + 60 * 60 * 24 * 30;
+    }
+
+    // Setup the environment and client
+    const rootCaDir = process.env.IAP_ROOT_CA_DIR || './apple-root-ca'
+    const bundleId = process.env.IAP_BUNDLE_ID;
+    const environment = getAppStoreEnvironmentFromEnv();
+    const client = createAppStoreServerAPIClientFromEnv();
+
+    // If the transaction ID is present, fetch the transaction history, verify the transactions, and return the latest expiry date
+    if (transaction_id != null) {
+        return await fetchLastVerifiedExpiryDate(client, transaction_id, rootCaDir, environment, bundleId, authenticated_account_token);
+    }
+    return Promise.resolve(null);
+}
+
+
+/**
  * Fetches transaction history with the App Store API, verifies the transactions, and returns the last valid expiry date.
  * It also verifies if the transaction belongs to the account who made the request.
  *
@@ -202,5 +232,5 @@ function getAppStoreEnvironmentFromEnv() {
 }
 
 module.exports = {
-    verify_receipt
+    verify_receipt, verify_transaction_id
 };

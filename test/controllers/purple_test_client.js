@@ -118,8 +118,24 @@ class PurpleTestClient {
   }
 
   /**
+    * Sends an IAP (Apple In-app purchase) transaction ID to the server.
+    *
+    * @param {string} user_uuid - The UUID of the user
+    * @param {number} transaction_id - The transaction ID
+    * @param {PurpleTestClientRequestOptions} options - The request options
+    * @returns {Promise<Object>} The response from the server
+    */
+  async send_transaction_id(user_uuid, transaction_id, options = {}) {
+    options = PurpleTestClient.patch_options({ nip98_authenticated: true, content_type: 'application/json' }, options)
+    return await this.post(`/accounts/${this.public_key}/apple-iap/transaction-id`, {
+      account_uuid: user_uuid,
+      transaction_id: transaction_id
+    }, options)
+  }
+
+  /**
    * Sends a GET request to the server.
-   * 
+   *
    * @param {string} path - The path to send the request to.
    * @param {PurpleTestClientRequestOptions} options - The request options.
    * @returns {Promise<Object>} The response from the server.

@@ -1,7 +1,7 @@
 const { json_response, simple_response, error_response, invalid_request, unauthorized_response } = require('./server_helpers')
 const { create_account, get_account_info_payload, check_account, get_account, put_account, get_account_and_user_id, get_user_uuid, bump_iap_set_expiry, delete_account } = require('./user_management')
 const handle_translate = require('./translate')
-const verify_receipt = require('./app_store_receipt_verifier').verify_receipt
+const { verify_receipt, verify_transaction_id } = require('./app_store_receipt_verifier');
 const bodyParser = require('body-parser')
 const cors = require('cors');
 const { required_nip98_auth, capture_raw_body, optional_nip98_auth } = require('./nip98_auth')
@@ -123,6 +123,64 @@ function config_router(app) {
         return
       }
       
+      let { account, user_id } = get_account_and_user_id(app, req.authorized_pubkey)
+      json_response(res, get_account_info_payload(user_id, account))
+      return
+    })
+
+
+    // This route is used to verify a transaction id and create (or extend the expiry date of) an account
+    // This is used for Apple in-app purchases
+    //
+    // Payload should be a JSON object in the following format:
+    // {
+    //    "transaction_id": <TRANSACTION_ID_AS_UINT64>
+    //    "account_uuid": <UUID_OF_ACCOUNT>
+    // }
+    //
+    // Make sure to set the Content-Type header to application/json
+    router.post('/accounts/:pubkey/apple-iap/transaction-id', required_nip98_auth, async (req, res) => {
+      const pubkey = req.params.pubkey
+      if (!pubkey) {
+        invalid_request(res, 'Could not parse account pubkey')
+        return
+      }
+
+      if (pubkey != req.authorized_pubkey) {
+        unauthorized_response(res, 'You are not authorized to access this account')
+        return
+      }
+
+      const transaction_id = req.body.transaction_id
+      if (!transaction_id) {
+        invalid_request(res, 'Missing transaction_id')
+        return
+      }
+
+      const alleged_account_uuid = req.body.account_uuid
+      if (!alleged_account_uuid) {
+        invalid_request(res, 'Missing account_uuid')
+        return
+      }
+
+      const account_uuid = get_user_uuid(app, pubkey)
+      if (account_uuid.toUpperCase() != alleged_account_uuid.toUpperCase()) {
+        unauthorized_response(res, 'The account UUID is not valid for this account. Expected: "' + account_uuid + '", got: "' + alleged_account_uuid + '"')
+        return
+      }
+
+      let expiry_date = await verify_transaction_id(transaction_id, account_uuid)
+      if (!expiry_date) {
+        unauthorized_response(res, 'Transaction ID invalid')
+        return
+      }
+
+      const { account: new_account, request_error } = bump_iap_set_expiry(app, req.authorized_pubkey, expiry_date)
+      if (request_error) {
+        error_response(res, request_error)
+        return
+      }
+
       let { account, user_id } = get_account_and_user_id(app, req.authorized_pubkey)
       json_response(res, get_account_info_payload(user_id, account))
       return

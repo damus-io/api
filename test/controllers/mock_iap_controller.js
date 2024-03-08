@@ -36,10 +36,20 @@ class MockIAPController {
   get_iap_receipt_data(user_uuid) {
     return MOCK_RECEIPT_DATA[user_uuid]
   }
-  
-  
+
+
+  /**
+  * Gets the transaction ID for a given user UUID
+  *
+  * @param {string} user_uuid - The UUID of the user to get the transaction ID for
+  * @returns {number} - The transaction ID
+  */
+  get_transaction_id(user_uuid) {
+    return MOCK_TRANSACTION_IDS[user_uuid]
+  }
+
   // MARK: - Mocking AppStoreServerAPIClient
-  
+
   /**
     * Generate a mock class for AppStoreServerAPIClient
     *
@@ -92,6 +102,10 @@ const MOCK_IAP_DATES = {
     purchase_date: 1708548300,
     expiry_date: 1708548600,
   }
+}
+
+const MOCK_TRANSACTION_IDS = {
+  [MOCK_ACCOUNT_UUIDS[0]]: 2000000529341175,
 }
 
 const MOCK_TRANSACTION_HISTORY_DATA = {
