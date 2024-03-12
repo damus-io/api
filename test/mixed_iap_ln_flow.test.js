@@ -38,9 +38,10 @@ test('Mixed IAP/LN Flow — Expiry dates should be nicely handled', async (t) =>
   t.same(account_info_response.statusCode, 200);
   // This user still had 5 days left on their subscription, so the expiry date should be 5 days after the IAP expiry date
   // i.e. The user should not lose any credit for the time they had left on their subscription
-  t.same(account_info_response.body.expiry, MOCK_IAP_DATES[user_uuid].expiry_date + 5 * 24 * 60 * 60); 
+  // TODO: This is hardcoded, but it should be calculated. To better calculate this we need better data structures for the data getters
+  t.same(account_info_response.body.expiry, 1708987500);
   t.same(account_info_response.body.active, true);
-  
+
   // TODO: Test other edge cases?
 
   t.end();

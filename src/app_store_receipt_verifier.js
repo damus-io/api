@@ -3,6 +3,9 @@
 /**
  * @typedef {import('@apple/app-store-server-library').JWSTransactionDecodedPayload} JWSTransactionDecodedPayload
  */
+/**
+ * @typedef {import('./transaction_management.js').Transaction} Transaction
+ */
 
 const { AppStoreServerAPIClient, Environment, ReceiptUtility, Order, ProductType, SignedDataVerifier } = require("@apple/app-store-server-library")
 const { current_time } = require("./utils")
@@ -14,15 +17,22 @@ const debug = require('debug')('api:iap')
  *
  * @param {string} receipt_data - The receipt data to verify in base64 format.
  * @param {string} authenticated_account_token - The UUID account token of the user who is authenticated in this request.
- * 
- * @returns {Promise<number|null>} The expiry date of the receipt if valid, null otherwise.
+ *
+ * @returns {Promise<Transaction[]|null>} The validated transactions
  */
 async function verify_receipt(receipt_data, authenticated_account_token) {
     debug("Verifying receipt with authenticated account token: %s", authenticated_account_token);
     // Mocking logic for testing purposes
     if (process.env.MOCK_VERIFY_RECEIPT == "true") {
         debug("Mocking verify_receipt with expiry date 30 days from now");
-        return current_time() + 60 * 60 * 24 * 30;
+        return [{
+          type: "iap",
+          id: "1",
+          start_date: current_time(),
+          end_date: current_time() + 60 * 60 * 24 * 30,
+          purchased_date: current_time(),
+          duration: null
+        }]
     }
 
     // Setup the environment and client
@@ -37,25 +47,32 @@ async function verify_receipt(receipt_data, authenticated_account_token) {
 
     // If the transaction ID is present, fetch the transaction history, verify the transactions, and return the latest expiry date
     if (transactionId != null) {
-        return await fetchLastVerifiedExpiryDate(client, transactionId, rootCaDir, environment, bundleId, authenticated_account_token);
+        return await fetchValidatedTransactions(client, transactionId, rootCaDir, environment, bundleId, authenticated_account_token);
     }
     return Promise.resolve(null);
 }
 
 /**
- * Verifies the transaction id and returns the expiry date if the transaction is valid.
+ * Verifies the transaction id and returns the verified transaction history if valid
  *
  * @param {number} transaction_id - The transaction id to verify.
  * @param {string} authenticated_account_token - The UUID account token of the user who is authenticated in this request.
  *
- * @returns {Promise<number|null>} The expiry date of the receipt if valid, null otherwise.
+ * @returns {Promise<Transaction[]|null>} The validated transactions
  */
 async function verify_transaction_id(transaction_id, authenticated_account_token) {
     debug("Verifying transaction id '%d' with authenticated account token: %s", transaction_id, authenticated_account_token);
     // Mocking logic for testing purposes
     if (process.env.MOCK_VERIFY_RECEIPT == "true") {
         debug("Mocking verify_receipt with expiry date 30 days from now");
-        return current_time() + 60 * 60 * 24 * 30;
+        return [{
+          type: "iap",
+          id: "1",
+          start_date: current_time(),
+          end_date: current_time() + 60 * 60 * 24 * 30,
+          purchased_date: current_time(),
+          duration: null
+        }];
     }
 
     // Setup the environment and client
@@ -66,14 +83,14 @@ async function verify_transaction_id(transaction_id, authenticated_account_token
 
     // If the transaction ID is present, fetch the transaction history, verify the transactions, and return the latest expiry date
     if (transaction_id != null) {
-        return await fetchLastVerifiedExpiryDate(client, transaction_id, rootCaDir, environment, bundleId, authenticated_account_token);
+        return await fetchValidatedTransactions(client, transaction_id, rootCaDir, environment, bundleId, authenticated_account_token);
     }
     return Promise.resolve(null);
 }
 
 
 /**
- * Fetches transaction history with the App Store API, verifies the transactions, and returns the last valid expiry date.
+ * Fetches transaction history with the App Store API, verifies the transactions, and returns formatted transactions.
  * It also verifies if the transaction belongs to the account who made the request.
  *
  * @param {AppStoreServerAPIClient} client - The App Store API client.
@@ -82,10 +99,10 @@ async function verify_transaction_id(transaction_id, authenticated_account_token
  * @param {Environment} environment - The App Store environment.
  * @param {string} bundleId - The bundle ID of the app.
  * @param {string} authenticatedAccountToken - The UUID account token of the user who is authenticated in this request.
- 
- * @returns {Promise<number|null>} The expiry date (As Unix timestamp measured in seconds) of the receipt if valid, null otherwise.
+
+ * @returns {Promise<Transaction[]|null>} The validated transactions
 */
-async function fetchLastVerifiedExpiryDate(client, transactionId, rootCaDir, environment, bundleId, authenticatedAccountToken) {
+async function fetchValidatedTransactions(client, transactionId, rootCaDir, environment, bundleId, authenticatedAccountToken) {
   const transactions = await fetchTransactionHistory(client, transactionId);
   debug("[Account token: %s] Fetched transaction history for transaction ID: %s; Found %d transactions", authenticatedAccountToken, transactionId, transactions.length);
   const rootCAs = readCertificateFiles(rootCaDir);
@@ -96,11 +113,16 @@ async function fetchLastVerifiedExpiryDate(client, transactionId, rootCaDir, env
   if (validDecodedTransactions.length === 0) {
     return null;
   }
-  const expiryDates = decodedTransactions.map((decodedTransaction) => decodedTransaction.expiresDate);
-  debug("[Account token: %s] Found expiry dates: %o", authenticatedAccountToken, expiryDates);
-  const latestExpiryDate = Math.max(...expiryDates);
-  debug("[Account token: %s] Latest expiry date: %d", authenticatedAccountToken, latestExpiryDate);
-  return latestExpiryDate / 1000; // Return the latest expiry date in seconds
+  return validDecodedTransactions.map((decodedTransaction) => {
+    return {
+      type: "iap",
+      id: decodedTransaction.transactionId,
+      start_date: decodedTransaction.purchaseDate / 1000,
+      end_date: decodedTransaction.expiresDate / 1000,
+      purchased_date: decodedTransaction.purchaseDate / 1000,
+      duration: null
+    }
+  })
 }
 
 /**

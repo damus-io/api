@@ -1,7 +1,8 @@
 const LNSocket = require('lnsocket')
-const { bump_expiry } = require('./user_management')
+const { add_successful_transactions_to_account } = require('./user_management')
 const { nip19 } = require('nostr-tools')
 const { v4: uuidv4 } = require('uuid')
+const { current_time } = require('./utils')
 
 const PURPLE_ONE_MONTH = "purple_one_month"
 const PURPLE_ONE_YEAR = "purple_one_year"
@@ -141,7 +142,7 @@ class PurpleInvoiceManager {
     if (checkout_object?.invoice) {
       checkout_object.invoice.paid = await this.check_invoice_is_paid(checkout_object.invoice.label)
       if (checkout_object.invoice.paid) {
-        this.handle_successful_payment(checkout_object.invoice.bolt11)
+        this.handle_successful_payment(checkout_object)
         checkout_object.completed = true
         await this.checkout_sessions_db.put(checkout_id, checkout_object)  // Update the checkout object since the state has changed
       }
@@ -174,7 +175,8 @@ class PurpleInvoiceManager {
   }
 
   // This is called when an invoice is successfully paid
-  async handle_successful_payment(bolt11) {
+  async handle_successful_payment(checkout_object) {
+    const bolt11 = checkout_object.invoice.bolt11;
     const invoice_request_info = this.invoices_db.get(bolt11)
     if (!invoice_request_info) {
       throw new Error("Invalid bolt11 or not found")
@@ -183,7 +185,14 @@ class PurpleInvoiceManager {
     this.invoices_db.put(bolt11, invoice_request_info)
     const npub = invoice_request_info.npub
     const pubkey = nip19.decode(npub).data.toString('hex')
-    const result = bump_expiry(this.api, pubkey, this.invoice_templates[invoice_request_info.template_name].expiry)
+    const result = add_successful_transactions_to_account(this.api, pubkey, [{
+      type: "ln",
+      id: checkout_object.id,
+      start_date: null,
+      end_date: null,
+      purchased_date: current_time(),
+      duration: this.invoice_templates[invoice_request_info.template_name].expiry
+    }]);
     if (!result.account) {
       throw new Error("Could not bump expiry")
     }

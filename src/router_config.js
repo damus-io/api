@@ -1,5 +1,5 @@
 const { json_response, simple_response, error_response, invalid_request, unauthorized_response } = require('./server_helpers')
-const { create_account, get_account_info_payload, check_account, get_account, put_account, get_account_and_user_id, get_user_uuid, bump_iap_set_expiry, delete_account } = require('./user_management')
+const { create_account, get_account_info_payload, check_account, get_account, put_account, get_account_and_user_id, get_user_uuid, delete_account, add_successful_transactions_to_account } = require('./user_management')
 const handle_translate = require('./translate')
 const { verify_receipt, verify_transaction_id } = require('./app_store_receipt_verifier');
 const bodyParser = require('body-parser')
@@ -110,14 +110,14 @@ function config_router(app) {
         unauthorized_response(res, 'The account UUID is not valid for this account. Expected: "' + account_uuid + '", got: "' + alleged_account_uuid + '"')
         return
       }
-      
-      let expiry_date = await verify_receipt(receipt_base64, account_uuid)
-      if (!expiry_date) {
+
+      let verified_transaction_history = await verify_receipt(receipt_base64, account_uuid)
+      if (!verified_transaction_history) {
         unauthorized_response(res, 'Receipt invalid')
         return
       }
-      
-      const { account: new_account, request_error } = bump_iap_set_expiry(app, req.authorized_pubkey, expiry_date)
+
+      const { account: new_account, request_error } = add_successful_transactions_to_account(app, req.authorized_pubkey, verified_transaction_history)
       if (request_error) {
         error_response(res, request_error)
         return
@@ -169,13 +169,13 @@ function config_router(app) {
         return
       }
 
-      let expiry_date = await verify_transaction_id(transaction_id, account_uuid)
-      if (!expiry_date) {
+      let verified_transaction_history = await verify_transaction_id(transaction_id, account_uuid)
+      if (!verified_transaction_history) {
         unauthorized_response(res, 'Transaction ID invalid')
         return
       }
 
-      const { account: new_account, request_error } = bump_iap_set_expiry(app, req.authorized_pubkey, expiry_date)
+      const { account: new_account, request_error } = add_successful_transactions_to_account(app, req.authorized_pubkey, verified_transaction_history)
       if (request_error) {
         error_response(res, request_error)
         return

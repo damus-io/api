@@ -99,6 +99,9 @@ const MOCK_ACCOUNT_UUIDS = [
 
 const MOCK_IAP_DATES = {
   [MOCK_ACCOUNT_UUIDS[0]]: {
+    // TODO: The dates are actually two ranges of dates, because there are two transactions. Improve this data structure.
+    // start_date: 1708541400
+    // expiry_date: 1708545000
     purchase_date: 1708548300,
     expiry_date: 1708548600,
   }

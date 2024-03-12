@@ -1,5 +1,11 @@
+// @ts-check
+const { deep_copy_unique_transaction_history, calculate_expiry_date_from_history } = require('./transaction_management')
 const { current_time } = require('./utils')
 const { v4: uuidv4 } = require('uuid')
+/**
+ * @typedef {import('./transaction_management.js').Transaction} Transaction
+ */
+
 
 // Helper function to get a user id from a pubkey
 function get_user_id_from_pubkey(api, pubkey) {
@@ -11,8 +17,36 @@ function get_account_and_user_id(api, pubkey) {
   const user_id = get_user_id_from_pubkey(api, pubkey)
   if (!user_id)
     return { account: null, user_id: null }
-  const account = api.dbs.accounts.get(user_id)
+  const account = get_account_by_user_id(api, user_id)
   return { account: account, user_id: user_id }
+}
+
+// A lower level function that fetches an account from the database by user id and transforms the data that is more usable for the rest of the code
+function get_account_by_user_id(api, user_id) {
+  const raw_account_data = api.dbs.accounts.get(user_id)
+  if (!raw_account_data)
+    return null
+
+  // For backwards compatibility, if the account has an expiry date, we add a legacy transaction to the transaction history
+  // The expiry date now is calculated on the fly from the transaction history
+
+  // @type {Transaction[]}
+  var transactions = raw_account_data?.transactions || []
+  if (raw_account_data?.expiry) {
+    transactions = [{
+      type: "legacy",
+      id: "0",
+      start_date: current_time(),
+      end_date: raw_account_data?.expiry,
+      purchased_date: current_time(),
+      duration: null
+    }, ...transactions]
+  }
+  var account = raw_account_data;
+  account.transactions = transactions
+  // TODO: Maybe we should cache these calculations, as they are called for every request
+  account.expiry = calculate_expiry_date_from_history(transactions)
+  return account
 }
 
 // Helper function to get an account from the database by pubkey
@@ -31,6 +65,11 @@ function get_last_user_id(api) {
 // Helper function to put an account into the database by pubkey
 function put_account(api, pubkey, account) {
   var user_id = get_user_id_from_pubkey(api, pubkey)
+  // Make sure we already converted to the transactions model before wiping out the expiry date
+  if (account.transactions.length > 0) {
+    account.expiry = null   // We don't store the expiry date in the database anymore, it's calculated on the fly from the transaction history
+  }
+
   if (user_id == null) {
     const last_user_id = get_last_user_id(api)
     user_id = last_user_id != null ? parseInt(last_user_id) + 1 : 1
@@ -52,7 +91,7 @@ function check_account(api, pubkey) {
   return { ok: true, message: null }
 }
 
-function create_account(api, pubkey, expiry, created_by_user = true) {
+function create_account(api, pubkey, transaction_history, created_by_user = true) {
   const account = get_account(api, pubkey)
 
   if (account)
@@ -62,62 +101,33 @@ function create_account(api, pubkey, expiry, created_by_user = true) {
     pubkey: pubkey,                       // Public key of the user
     created_at: current_time(),           // Time when the account was created
     created_by_user: created_by_user,     // true if the account was created by the user itself, false if it might have been created by someone else.
-    expiry: expiry,                       // Date and time when the account expires
+    expiry: null,                       // Date and time when the account expires. This is a legacy field, which now is calculated from the transaction history.
+    transactions: transaction_history,     // The transaction history of the account
   }
 
   const { user_id } = put_account(api, pubkey, new_account)
   return { account: new_account, request_error: null, user_id: user_id }
 }
 
-function bump_expiry(api, pubkey, expiry_delta) {
-  const account = get_account(api, pubkey)
-  if (!account) {
-    // Create account if it doesn't exist already
-    return create_account(api, pubkey, current_time() + expiry_delta)
-  }
-  if (!account.expiry) {
-    // Set expiry if it doesn't exist already
-    account.expiry = current_time() + expiry_delta
-  }
-  else if (account.expiry < current_time()) {
-    // Set new expiry if it has already expired
-    account.expiry = current_time() + expiry_delta
-  }
-  else if (account.expiry >= current_time()) {
-    // Accumulate expiry if it hasn't expired yet
-    account.expiry += expiry_delta
-  }
-  put_account(api, pubkey, account)
-  return { account: account, request_error: null }
-}
 
-/**
-  * Sets the expiry date to a fixed date, but also bumps the expiry date if there is any time left.
-  * It also creates the account if it doesn't exist already.
-  *
-  * @param {Object} api - The API object
-  * @param {string} pubkey - The public key of the user, hex encoded
-  * @param {number} expiry_date - The new expiry date
+/** Adds successful transactions to the account
+* @param {Object} api - The API object
+* @param {string} pubkey - The public key of the user, hex encoded
+* @param {Transaction[]} transactions - The transactions to be added
+* @returns {{account?: Object, request_error?: string | null, user_id?: number}} - The account object, or null if the account does not exist, and the request error, or null if there was no error
 */
-function bump_iap_set_expiry(api, pubkey, expiry_date) {
+function add_successful_transactions_to_account(api, pubkey, transactions) {
   const account = get_account(api, pubkey)
   if (!account) {
     // Create account if it doesn't exist already
-    return create_account(api, pubkey, expiry_date)
+    return create_account(api, pubkey, transactions)
   }
-  if (!account.expiry) {
-    // Set expiry if it doesn't exist already
-    account.expiry = expiry_date
+  if (!account.transactions) {
+    account.transactions = []
   }
-  else if (account.expiry < current_time()) {
-    // Set new expiry if it has already expired
-    account.expiry = expiry_date
-  }
-  else if (account.expiry >= current_time()) {
-    // Accumulate expiry if it hasn't expired yet
-    const remaining_time = account.expiry - current_time()
-    account.expiry = expiry_date + remaining_time
-  }
+  const merged_transactions = account.transactions.concat(transactions)
+  const unique_transactions = deep_copy_unique_transaction_history(merged_transactions)
+  account.transactions = unique_transactions
   put_account(api, pubkey, account)
   return { account: account, request_error: null }
 }
@@ -165,4 +175,4 @@ function delete_account(api, pubkey) {
   return { delete_error: null };
 }
 
-module.exports = { check_account, create_account, get_account_info_payload, bump_expiry, get_account, put_account, get_account_and_user_id, get_user_id_from_pubkey, get_user_uuid, bump_iap_set_expiry, delete_account }
+module.exports = { check_account, create_account, get_account_info_payload, get_account, put_account, get_account_and_user_id, get_user_id_from_pubkey, get_user_uuid, delete_account, add_successful_transactions_to_account }
