@@ -382,10 +382,49 @@ function config_router(app) {
         invalid_request(res, { error: delete_error })
         return
       }
-      
+
       json_response(res, { success: true })
     })
-    
+
+    /**
+      * This route is used to delete a user account transaction history.
+      * This is useful when testing first checkout flows, and we need to reset the user's transaction history.
+    */
+    router.delete('/admin/users/:pubkey/transaction-history', async (req, res) => {
+      const pubkey = req.params.pubkey
+      const body = req.body
+      const admin_password = body.admin_password
+      if (!process.env.ADMIN_PASSWORD) {
+        unauthorized_response(res, 'Admin password not set in the environment variables')
+        return
+      }
+      if (!admin_password) {
+        unauthorized_response(res, 'Missing admin_password')
+        return
+      }
+      if (admin_password != process.env.ADMIN_PASSWORD) {
+        unauthorized_response(res, 'Invalid admin password')
+        return
+      }
+      if (!pubkey) {
+        invalid_request(res, 'Missing pubkey')
+        return
+      }
+      const { account, user_id } = get_account_and_user_id(app, pubkey)
+
+      account.transactions = []
+      account.expiry = null
+      try {
+        put_account(app, pubkey, account)
+      }
+      catch (e) {
+        error("Error when putting account: %s", e.toString())
+        invalid_request(res, { error: e.toString() })
+        return
+      }
+      json_response(res, { success: true })
+    })
+
     /**
       * This route is used to force a specific UUID for a user account.
       *
