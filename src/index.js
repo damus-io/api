@@ -8,6 +8,7 @@ const dotenv = require('dotenv')
 const express = require('express')
 const debug = require('debug')('api')
 const { PurpleInvoiceManager } = require('./invoicing')
+const { WebAuthManager } = require('./web_auth')
 
 const ENV_VARS = ["LN_NODE_ID", "LN_NODE_ADDRESS", "LN_RUNE", "LN_WS_PROXY", "DEEPL_KEY", "DB_PATH"]
 
@@ -37,7 +38,9 @@ function PurpleApi(opts = {}) {
   const pubkeys_to_user_uuids = db.openDB('pubkeys_to_user_uuids')  // Needed for association with Apple In-App Purchases
   const invoices = db.openDB('invoices')
   const checkout_sessions = db.openDB('checkout_sessions')
-  const dbs = { translations, accounts, invoices, pubkeys_to_user_ids, checkout_sessions, pubkeys_to_user_uuids }
+  const otp_codes = db.openDB('otp_codes')
+  const sessions = db.openDB('sessions')
+  const dbs = { translations, accounts, invoices, pubkeys_to_user_ids, checkout_sessions, pubkeys_to_user_uuids, otp_codes, sessions }
   const router = express()
 
   // translation data
@@ -50,6 +53,7 @@ function PurpleApi(opts = {}) {
   this.invoice_manager = new PurpleInvoiceManager(this, process.env.LN_NODE_ID, process.env.LN_NODE_ADDRESS, process.env.LN_RUNE, process.env.LN_WS_PROXY)
   debug("loaded invoice-manager node_id:%s node_addr:%s rune:%s proxy:%s", process.env.LN_NODE_ID, process.env.LN_NODE_ADDRESS, process.env.LN_RUNE, process.env.LN_WS_PROXY)
   this.invoice_manager.connect_and_init()
+  this.web_auth_manager = new WebAuthManager(dbs)
 
   return this
 }

@@ -299,6 +299,64 @@ function config_router(app) {
     }
   })
 
+  // MARK: OTP routes
+
+  router.post('/accounts/:pubkey/request-otp', async (req, res) => {
+    const pubkey = req.params.pubkey
+    if (!pubkey) {
+      invalid_request(res, 'Could not parse account pubkey')
+      return
+    }
+    const { account, user_id } = get_account_and_user_id(app, pubkey)
+    if (!account) {
+      simple_response(res, 404)
+      return
+    }
+    const otp_code = await app.web_auth_manager.generate_otp(pubkey)
+    await app.web_auth_manager.send_otp(pubkey, otp_code)
+    json_response(res, { success: true })
+  });
+
+  router.post('/accounts/:pubkey/verify-otp', async (req, res) => {
+    const pubkey = req.params.pubkey
+    if (!pubkey) {
+      invalid_request(res, 'Could not parse account pubkey')
+      return
+    }
+    const { account, user_id } = get_account_and_user_id(app, pubkey)
+    if (!account) {
+      simple_response(res, 404)
+      return
+    }
+    const otp_code = req.body.otp_code
+    if (!otp_code) {
+      invalid_request(res, 'Missing otp_code')
+      return
+    }
+    const is_valid = await app.web_auth_manager.validate_otp(pubkey, otp_code)
+
+    if(is_valid) {
+      const session_token = await app.web_auth_manager.create_session(pubkey)
+      json_response(res, { valid: true, session_token: session_token })
+      return
+    }
+
+    unauthorized_response(res, { valid: false })
+  });
+
+  // MARK: Session routes
+
+  router.get('/sessions/account', app.web_auth_manager.require_web_auth.bind(app.web_auth_manager), async (req, res) => {
+    const pubkey = req.authorized_pubkey
+    const { account, user_id } = get_account_and_user_id(app, pubkey)
+    if (!account) {
+      simple_response(res, 404)
+      return
+    }
+    json_response(res, get_account_info_payload(user_id, account, true))
+    return
+  });
+
   // MARK: Admin routes
 
   // Used by the admin to create a new verified checkout

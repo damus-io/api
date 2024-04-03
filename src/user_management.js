@@ -132,16 +132,19 @@ function add_successful_transactions_to_account(api, pubkey, transactions) {
   return { account: account, request_error: null }
 }
 
-function get_account_info_payload(subscriber_number, account) {
+function get_account_info_payload(subscriber_number, account, authenticated = false) {
   if (!account)
     return null
+
+  const account_active = (account.expiry && current_time() < account.expiry) ? true : false
 
   return {
     pubkey: account.pubkey,
     created_at: account.created_at,
     expiry: account.expiry ? account.expiry : null,
     subscriber_number: subscriber_number,
-    active: (account.expiry && current_time() < account.expiry) ? true : false,
+    active: account_active,
+    testflight_url: (authenticated && account_active) ? process.env.TESTFLIGHT_URL : null,
   }
 }
 
