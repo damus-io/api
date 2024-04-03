@@ -118,6 +118,40 @@ class PurpleTestClient {
   }
 
   /**
+   * Requests an OTP code.
+   * 
+   * @param {PurpleTestClientRequestOptions} options - The request options
+   * @returns {Promise<Object>} The response from the server
+   */
+  async request_otp(options = {}) {
+    return await this.post(`/accounts/${this.public_key}/request-otp`, null, options)
+  }
+
+  /**
+   * Verifies an OTP code.
+   * 
+   * @param {string} otp_code - The OTP code to validate
+   * @param {PurpleTestClientRequestOptions} options - The request options
+   * @returns {Promise<Object>} The response from the server
+   */
+  async verify_otp(otp_code, options = {}) {
+    return await this.post(`/accounts/${this.public_key}/verify-otp`, { otp_code: otp_code }, options)
+  }
+
+  /**
+   * Gets the account information for the current public key using a session token.
+   * 
+   * @param {string} session_token - The session token
+   * @param {PurpleTestClientRequestOptions} options - The request options
+   * 
+   * @returns {Promise<Object>} The account information
+   */
+  async get_account_with_session_token(session_token, options = {}) {
+    options = PurpleTestClient.patch_options({ session_token: session_token }, options)
+    return await this.get(`/sessions/account`, options)
+  }
+
+  /**
     * Sends an IAP (Apple In-app purchase) transaction ID to the server.
     *
     * @param {string} user_uuid - The UUID of the user
@@ -197,6 +231,9 @@ class PurpleTestClient {
     // Authentication
     if (options?.nip98_authenticated) {
       request = request.set('Authorization', await this.get_nip98_auth_header(method, path, body))
+    }
+    if (options?.session_token) {
+      request = request.set('Authorization', `Bearer ${options.session_token}`)
     }
     // Content type
     if (options?.content_type) {
@@ -281,6 +318,7 @@ class PurpleTestClient {
  * @typedef {Object} PurpleTestClientRequestOptions
  * 
  * @property {boolean} [nip98_authenticated] - Whether the request should be authenticated with NIP98
+ * @property {string} [session_token] - The session token to use on the authorization header
  * @property {string} [content_type] - The content type of the request
  * @property {{ response: number, deadline: number }} [timeout] - The timeout of the request
  * 

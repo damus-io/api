@@ -24,6 +24,7 @@ class PurpleTestController {
     this.setup_db()
     this.purple_api = this.PurpleApi()
     this.purple_api.register_routes()
+    this.web_auth_controller = new this.MockWebAuthController(t, this.purple_api.web_auth_manager)
     this.test_request = null  // Will be set in connect_and_init
     this.mock_ln_node_controller = new this.MockLNNodeController(t, 24 * 60 * 60)  // 24 hours expiry for the invoices
     /**
@@ -50,6 +51,10 @@ class PurpleTestController {
     process.env.IAP_BUNDLE_ID = "com.jb55.damus2"
     process.env.IAP_PRIVATE_KEY_PATH = "./test_utils/mock.p8"
     process.env.IAP_ENVIRONMENT = "Sandbox"
+    process.env.OTP_MAX_TRIES = 10
+    process.env.SESSION_EXPIRY = 60*60*24*7
+    process.env.OTP_EXPIRY = 60*5
+    process.env.TESTFLIGHT_URL = "https://testflight.apple.com/join/abc123"
   }
 
   setup_stubs() {
@@ -84,6 +89,11 @@ class PurpleTestController {
       '../../src/utils.js': { ...require('../../src/utils.js'), current_time: this.current_time.bind(this) },
       'lnsocket': mock_ln_socket
     }).PurpleTestClient;
+
+    this.MockWebAuthController = this.t.mockRequire('./mock_web_auth_controller.js', {
+      '../../src/utils.js': { ...require('../../src/utils.js'), current_time: this.current_time.bind(this) },
+      'lnsocket': mock_ln_socket
+    }).MockWebAuthController;
   }
 
   async connect_and_init() {
