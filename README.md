@@ -12,6 +12,7 @@ The Damus API backend for Damus Purple and other functionality.
 
 - `DB_PATH`: Path to the folder where to save mdb files.
 - `DEEPL_KEY`: API key for DeepL translation service (Can be set to something bogus for local testing with mock translations)
+- `TESTFLIGHT_URL`: URL for the TestFlight app (optional)
 
 #### Apple In-App Purchase (IAP)
 
@@ -31,6 +32,13 @@ The Damus API backend for Damus Purple and other functionality.
 - `LN_NODE_ID`: The public node ID of the Lightning Network node in hex format
 - `LN_RUNE`: The public node ID of the Lightning Network node
 - `TEST_PRODUCTS`: Set to `"true"` to enable test products for Lightning Network payments with a value of 1 satoshi (for testing only)
+
+
+#### OTP login
+
+- `OTP_MAX_TRIES`: The maximum number of OTP tries allowed before locking the user out. Defaults to 10.
+- `SESSION_EXPIRY`: The time in seconds before a session expires. Defaults to 1 week.
+- `OTP_EXPIRY`: The time in seconds before an OTP expires. Defaults to 5 minutes.
 
 #### Extras
 
