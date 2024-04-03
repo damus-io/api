@@ -30,8 +30,9 @@
     "lmdb": "^2.9.1",
     "lnsocket": "^0.3.3",
     "nostr": "^0.2.8",
-    "nostr-tools": "^2.1.2",
-    "uuid": "^9.0.1"
+    "nostr-tools": "^2.3.1",
+    "uuid": "^9.0.1",
+    "ws": "^8.16.0"
   },
   "devDependencies": {
     "@tapjs/sinon": "^1.1.17",
