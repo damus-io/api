@@ -143,6 +143,12 @@ async function generate_test_api(t, config) {
         put: (pubkey, user_id) => { },
       },
     },
+    web_auth_manager: {
+      require_web_auth: async (req, res, next) => {
+        req.authorized_pubkey = 'abc123';
+        next();
+      }
+    }
   };
 
   config_router(api);

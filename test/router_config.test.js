@@ -50,6 +50,12 @@ test('config_router - Account management routes', async (t) => {
         }
       }
 
+    },
+    web_auth_manager: {
+      require_web_auth: async (req, res, next) => {
+        req.authorized_pubkey = 'abc123';
+        next();
+      }
     }
   };
 
@@ -68,6 +74,7 @@ test('config_router - Account management routes', async (t) => {
       subscriber_number: 1,
       expiry: account_info.expiry,
       active: true,
+      testflight_url: null
     };
     t.same(res.body, expectedData, 'Response should match expected value');
     t.end();
