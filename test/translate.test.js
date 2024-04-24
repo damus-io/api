@@ -7,9 +7,11 @@ const current_time = require('../src/utils').current_time;
 const { supertest_client, TEST_BASE_URL } = require('./controllers/utils');
 
 
+const TRANSLATION_PROVIDER = process.env.TRANSLATION_PROVIDER
+
 // MARK: - Tests
 
-tap.test('translate_payload - Existing translation in database (mocked db)', async (t) => {
+tap.test(`translate_payload - Existing translation in database (${TRANSLATION_PROVIDER})`, async (t) => {
   const api = await generate_test_api(t, {
     simulate_existing_translation_in_db: "<EXISTING_TRANSLATION>",
     simulate_account_found_in_db: true,
@@ -29,7 +31,7 @@ tap.test('translate_payload - Existing translation in database (mocked db)', asy
   t.end();
 });
 
-tap.test(`translate_payload - reject json data (mocked server)`, async (t) => {
+tap.test(`translate_payload - reject json data (${TRANSLATION_PROVIDER} server)`, async (t) => {
   const api = await generate_test_api(t, {
     simulate_existing_translation_in_db: false,
     simulate_account_found_in_db: true,
@@ -51,26 +53,43 @@ tap.test(`translate_payload - reject json data (mocked server)`, async (t) => {
   t.same(res.body, expected_result, 'Response should match expected value');
 })
 
-tap.test('translate_payload - New translation (mocked server)', async (t) => {
+tap.test(`translate_payload - New translation (${TRANSLATION_PROVIDER} server)`, async (t) => {
   const api = await generate_test_api(t, {
     simulate_existing_translation_in_db: false,
     simulate_account_found_in_db: true,
   });
 
-  const expected_result = {
-    text: "Mock translation",
-  };
+  const expected_text = "Mock translation";
 
   // Create a stub for fetch
-  const fetchStub = sinon.stub(global, 'fetch').returns(Promise.resolve({
-    json: async () => {
-      return {
-        translations: [
-          expected_result
-        ]
-      };
+  let fetchStub = null
+
+  switch (TRANSLATION_PROVIDER) {
+    case "deepl": {
+      fetchStub = sinon.stub(global, 'fetch').returns(Promise.resolve({
+        json: async () => {
+          return {
+            translations: [
+              {text: expected_text}
+            ]
+          };
+        },
+        ok: true
+      }));
+      break
     }
-  }));
+    case "noswhere": {
+      sinon.stub(global, 'fetch').returns(Promise.resolve({
+        json: async () => {
+          return {
+            result: expected_text,
+          };
+        },
+        ok: true
+      }));
+      break
+    }
+  }
 
   const test_data = await generate_test_request_data(api);
 
@@ -79,15 +98,15 @@ tap.test('translate_payload - New translation (mocked server)', async (t) => {
     .set('Authorization', 'Nostr ' + test_data.auth_note_base64)
 
   t.same(res.statusCode, 200, 'Response should be 200');
-  t.same(res.body, expected_result, 'Response should match expected value');
+  t.same(res.body, {text: expected_text}, 'Response should match expected value');
 
   // Restore fetch
-  fetchStub.restore();
+  fetchStub?.restore();
 
   t.end();
 });
 
-tap.test('translate - Account not found (mocked db)', async (t) => {
+tap.test(`translate - Account not found (${TRANSLATION_PROVIDER})`, async (t) => {
   const api = await generate_test_api(t, {
     simulate_existing_translation_in_db: false,
     simulate_account_found_in_db: false,
@@ -100,7 +119,7 @@ tap.test('translate - Account not found (mocked db)', async (t) => {
   t.end();
 });
 
-tap.test('translate - Account expired (mocked db)', async (t) => {
+tap.test(`translate - Account expired (${TRANSLATION_PROVIDER})`, async (t) => {
   const api = await generate_test_api(t, {
     simulate_existing_translation_in_db: false,
     simulate_account_expired: true,

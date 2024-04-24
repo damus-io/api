@@ -11,8 +11,13 @@ The Damus API backend for Damus Purple and other functionality.
 #### Essential
 
 - `DB_PATH`: Path to the folder where to save mdb files.
-- `DEEPL_KEY`: API key for DeepL translation service (Can be set to something bogus for local testing with mock translations)
 - `TESTFLIGHT_URL`: URL for the TestFlight app (optional)
+
+#### Translations
+
+- `TRANSLATION_PROVIDER`: The translation provider to use, can be: `mock`, `deepl`, `noswhere`
+- `DEEPL_KEY`: The DeepL key to use for DeepL translations if enabled.
+- `NOSWHERE_KEY`: The Noswhere key to use for Noswhere translations if enabled.
 
 #### Apple In-App Purchase (IAP)
 

@@ -10,14 +10,13 @@
     "damus-api": "./src/index.js"
   },
   "scripts": {
-    "test": "ALLOW_HTTP_AUTH=\"true\" DEEPL_KEY=123 tap test/*.test.js",
+    "test": "ALLOW_HTTP_AUTH=\"true\" DEEPL_KEY=123 TRANSLATION_PROVIDER=mock tap test/*.test.js",
     "test-translate": "ALLOW_HTTP_AUTH=\"true\" TRANSLATION_PROVIDER=mock tap test/translate.test.js",
+    "test-noswhere": "ALLOW_HTTP_AUTH=\"true\" TRANSLATION_PROVIDER=noswhere tap test/translate.test.js",
     "debug-test": "ALLOW_HTTP_AUTH=\"true\" DEEPL_KEY=123 tap test/*.test.js --timeout=2400",
     "start": "node src/index.js",
-    "mock_deepl": "node test_utils/mock_deepl.js",
-    "start_with_mock": "DEEPL_KEY=123 DEEPL_URL=http://localhost:8990 ENABLE_HTTP_AUTH=\"true\" node src/index.js",
-    "dev": "npm run mock_deepl & npm run start_with_mock",
-    "dev-debug": "npm run mock_deepl & DEEPL_KEY=123 DEEPL_URL=http://localhost:8990 ENABLE_HTTP_AUTH=\"true\" node inspect src/index.js",
+    "dev": "TRANSLATION_PROVIDER=mock ENABLE_HTTP_AUTH=\"true\" node src/index.js",
+    "dev-debug": "TRANSLATION_PROVIDER=mock ENABLE_HTTP_AUTH=\"true\" node --inspect src/index.js",
     "type-check": "tsc --checkJs --allowJs src/*.js --noEmit --skipLibCheck",
     "type-check-path": "tsc --checkJs --allowJs --noEmit --skipLibCheck"
   },

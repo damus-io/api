@@ -2,27 +2,29 @@
 const util = require('./server_helpers')
 const crypto = require('crypto')
 const current_time = require('./utils').current_time
+const SUPPORTED_TRANSLATION_PROVIDERS = new Set(["mock", "noswhere", "deepl"])
+let translation_provider = null
 
-const translate_sources = new Set(['BG', 'CS', 'DA', 'DE', 'EL', 'EN', 'ES', 'ET', 'FI', 'FR', 'HU', 'ID', 'IT', 'JA', 'KO', 'LT', 'LV', 'NB', 'NL', 'PL', 'PT', 'RO', 'RU', 'SK', 'SL', 'SV', 'TR', 'UK', 'ZH'])
-const translate_targets = new Set(['BG', 'CS', 'DA', 'DE', 'EL', 'EN', 'EN-GB', 'EN-US', 'ES', 'ET', 'FI', 'FR', 'HU', 'ID', 'IT', 'JA', 'KO', 'LT', 'LV', 'NB', 'NL', 'PL', 'PT', 'PT-BR', 'PT-PT', 'RO', 'RU', 'SK', 'SL', 'SV', 'TR', 'UK', 'ZH'])
+if (!process.env.TRANSLATION_PROVIDER) {
+  throw new Error("expected TRANSLATION_PROVIDER")
+}
 
-const DEEPL_KEY = process.env.DEEPL_KEY
-const DEEPL_URL = process.env.DEEPL_URL || 'https://api.deepl.com/v2/translate'
+if (!SUPPORTED_TRANSLATION_PROVIDERS.has(process.env.TRANSLATION_PROVIDER)) {
+  throw new Error("translation provider not supported")
+}
 
-if (!DEEPL_KEY)
-  throw new Error("expected DEEPL_KEY env var")
+// this is safe, as the input value is restricted to known good ones.
+translation_provider = new (require("./translate/" + process.env.TRANSLATION_PROVIDER + ".js"))()
 
 async function validate_payload(payload) {
-  if (!payload.source)
-    return { ok: false, message: 'missing source' }
-  if (!payload.target)
-    return { ok: false, message: 'missing target' }
-  if (!payload.q)
-    return { ok: false, message: 'missing q' }
-  if (!translate_sources.has(payload.source))
-    return { ok: false, message: 'invalid translation source' }
-  if (!translate_targets.has(payload.target))
-    return { ok: false, message: 'invalid translation target' }
+  if (typeof payload.source !== "string")
+    return { ok: false, message: 'bad source' }
+  if (typeof payload.target !== "string")
+    return { ok: false, message: 'bad target' }
+  if (typeof payload.q !== "string")
+    return { ok: false, message: 'bad q' }
+  if (!translation_provider.canTranslate(payload.source, payload.target))
+    return { ok: false, message: 'invalid translation source/target' }
 
   return { ok: true, message: 'valid' }
 }
@@ -30,43 +32,22 @@ async function validate_payload(payload) {
 function hash_payload(payload) {
   const hash = crypto.createHash('sha256')
   hash.update(payload.q)
-  hash.update(payload.source)
-  hash.update(payload.target)
+  hash.update(payload.source.toUpperCase())
+  hash.update(payload.target.toUpperCase())
   return hash.digest()
-}
-
-async function deepl_translate_text(payload) {
-  let resp = await fetch(DEEPL_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `DeepL-Auth-Key ${DEEPL_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      text: [payload.q],
-      source_lang: payload.source,
-      target_lang: payload.target,
-    })
-  })
-
-  let data = await resp.json()
-
-  if (data.translations && data.translations.length > 0) {
-    return data.translations[0].text;
-  }
-
-  return null
 }
 
 async function translate_payload(api, res, payload, trans_id) {
   // we might already be translating this
   const job = api.translation.queue[trans_id]
   if (job) {
-    let text = await job
-    if (text === null)
-      return util.error_response(res, 'deepl translation error')
-
-    return util.json_response(res, { text })
+    try {
+      let result = await job
+      return util.json_response(res, { text: result.text })
+    } catch(e) {
+      console.error("translation error: %o", e)
+      return util.error_response(res, 'translation error')
+    }
   }
 
   // we might have it in the database already
@@ -78,26 +59,28 @@ async function translate_payload(api, res, payload, trans_id) {
     return util.json_response(res, { text })
   }
 
-  const new_job = deepl_translate_text(payload)
+  const new_job = translation_provider.translate(payload.source, payload.target, payload.q)
   api.translation.queue[trans_id] = new_job
 
-  let text = await new_job
-  if (text === null) {
-    delete api.translation.queue[trans_id]
-    return util.error_response(res, 'deepl translation error')
-  }
+  let result
 
+  try {
+    result = await new_job
+  } catch(e) {
+    console.error("translation error: %o", e)
+    return util.error_response(res, 'translation error')
+  } finally {
+    delete api.translation.queue[trans_id]
+  }
   // return results immediately
-  util.json_response(res, { text })
+  util.json_response(res, { text: result.text })
 
   // write result to db
   await api.dbs.translations.put(trans_id, {
-    text: text,
+    text: result.text,
     translated_at: current_time(),
     payload: payload
   })
-
-  delete api.translation.queue[trans_id]
 }
 
 function payload_is_data(q) {
@@ -111,8 +94,8 @@ function payload_is_data(q) {
 async function handle_translate(api, req, res) {
   let id
   try {
-    const source = req.query.source.toUpperCase()
-    const target = req.query.target.toUpperCase()
+    const source = req.query.source.toLowerCase()
+    const target = req.query.target.toLowerCase()
     const q = req.query.q
     if (payload_is_data(q))
       return util.invalid_request(res, `payload is data`)
