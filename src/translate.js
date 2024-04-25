@@ -116,7 +116,6 @@ async function handle_translate(api, req, res) {
     if (id)
       delete api.translation.queue[id]
     util.invalid_request(res, `error processing request: ${err}`)
-    throw err
   }
 }
 
