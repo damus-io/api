@@ -12,6 +12,7 @@ module.exports = class NoswhereTranslator {
     async #loadTranslationLangs() {
         let resp = await fetch(this.#noswhereURL + "/langs", {
             method: 'GET',
+            timeout: 5000,
             headers: {
                 'X-Noswhere-Key': this.#noswhereKey,
                 'Content-Type': 'application/json'
