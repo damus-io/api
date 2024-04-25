@@ -29,6 +29,28 @@ tap.test('translate_payload - Existing translation in database (mocked db)', asy
   t.end();
 });
 
+tap.test(`translate_payload - reject json data (mocked server)`, async (t) => {
+  const api = await generate_test_api(t, {
+    simulate_existing_translation_in_db: false,
+    simulate_account_found_in_db: true,
+  });
+
+  const payload = JSON.stringify({"hello": 1})
+  const expected_result = {
+    error: "payload is data",
+  };
+
+  const url = `/translate?source=EN&target=JA&q=${encodeURIComponent(payload)}`
+  const test_data = await generate_test_request_data(api, url)
+
+  const res = await api.test_request
+    .get(url)
+    .set('Authorization', 'Nostr ' + test_data.auth_note_base64)
+
+  t.same(res.statusCode, 400, 'Response should be 400');
+  t.same(res.body, expected_result, 'Response should match expected value');
+})
+
 tap.test('translate_payload - New translation (mocked server)', async (t) => {
   const api = await generate_test_api(t, {
     simulate_existing_translation_in_db: false,
@@ -158,11 +180,11 @@ async function generate_test_api(t, config) {
   return api;
 }
 
-async function generate_test_request_data(api) {
+async function generate_test_request_data(api, q) {
   let test_privkey = '10a9842fadc0aae2a649a1b707bf97e48c787b8517af4728ba3ec304089451be';
   let test_pubkey = nostr.getPublicKey(test_privkey);
 
-  let query_url = '/translate?source=EN&target=JA&q=Hello'
+  let query_url = q || '/translate?source=EN&target=JA&q=Hello'
   let full_query_url = api.router.base_url + query_url;
 
   let auth_note_template = {

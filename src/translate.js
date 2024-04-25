@@ -100,12 +100,22 @@ async function translate_payload(api, res, payload, trans_id) {
   delete api.translation.queue[trans_id]
 }
 
+function payload_is_data(q) {
+  try {
+    return Object.keys(JSON.parse(q)).length > 0
+  } catch {
+    return false
+  }
+}
+
 async function handle_translate(api, req, res) {
   let id
   try {
     const source = req.query.source.toUpperCase()
     const target = req.query.target.toUpperCase()
     const q = req.query.q
+    if (payload_is_data(q))
+      return util.invalid_request(res, `payload is data`)
     const payload = { source, target, q }
     const validation_res = await validate_payload(payload)
     if (validation_res.ok === false)
