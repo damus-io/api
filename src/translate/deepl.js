@@ -1,5 +1,5 @@
 const translate_sources = new Set([
-    'bg', 'cs', 'da', 'de', 'el',
+    'ar', 'bg', 'cs', 'da', 'de', 'el',
     'en', 'es', 'et', 'fi', 'fr',
     'hu', 'id', 'it', 'ja', 'ko',
     'lt', 'lv', 'nb', 'nl', 'pl',
@@ -7,7 +7,7 @@ const translate_sources = new Set([
     'sv', 'tr', 'uk', 'zh'
 ])
 const translate_targets = new Set([
-    'bg', 'cs', 'da', 'de',
+    'ar', 'bg', 'cs', 'da', 'de',
     'el', 'en', 'en-gb', 'en-us',
     'es', 'et', 'fi', 'fr',
     'hu', 'id', 'it', 'ja',
