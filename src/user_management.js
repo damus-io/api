@@ -27,6 +27,10 @@ function get_account_by_user_id(api, user_id) {
   if (!raw_account_data)
     return null
 
+  return get_account_from_raw_account_data(raw_account_data)
+}
+
+function get_account_from_raw_account_data(raw_account_data) {
   // For backwards compatibility, if the account has an expiry date, we add a legacy transaction to the transaction history
   // The expiry date now is calculated on the fly from the transaction history
 
@@ -76,7 +80,8 @@ function put_account(api, pubkey, account) {
     api.dbs.pubkeys_to_user_ids.put(pubkey, user_id)
   }
   api.dbs.accounts.put(user_id, account)
-  return { account: account, user_id: user_id }
+  const new_account = get_account_from_raw_account_data(account)
+  return { account: new_account, user_id: user_id }
 }
 
 function check_account(api, pubkey) {
@@ -128,8 +133,8 @@ function add_successful_transactions_to_account(api, pubkey, transactions) {
   const merged_transactions = account.transactions.concat(transactions)
   const unique_transactions = deep_copy_unique_transaction_history(merged_transactions)
   account.transactions = unique_transactions
-  put_account(api, pubkey, account)
-  return { account: account, request_error: null }
+  const { account: new_account, user_id } = put_account(api, pubkey, account)
+  return { account: new_account, user_id, request_error: null }
 }
 
 function get_account_info_payload(subscriber_number, account, authenticated = false) {
