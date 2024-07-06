@@ -3,7 +3,8 @@
 
 const { supertest_client } = require('./utils.js');
 const fs = require('fs')
-const dotenv = require('dotenv')
+const dotenv = require('dotenv');
+const { SignedDataVerifier } = require('@apple/app-store-server-library');
 /**
  * @typedef {import('./purple_test_client.js').PurpleTestClient} PurpleTestClient
  */
@@ -76,7 +77,8 @@ class PurpleTestController {
       'lnsocket': mock_ln_socket,
       '@apple/app-store-server-library': {
         ...require('@apple/app-store-server-library'),
-        AppStoreServerAPIClient: this.iap.generate_app_store_server_api_client()
+        AppStoreServerAPIClient: this.iap.generate_app_store_server_api_client(),
+        SignedDataVerifier: this.iap.generate_signed_data_verifier()
       }
     })
 

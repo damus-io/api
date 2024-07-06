@@ -16,8 +16,13 @@ function current_time() {
 	return utils.current_time();
 }
 
+function deep_copy(obj) {
+    return JSON.parse(JSON.stringify(obj))
+  }
+
 module.exports = {
     hash_sha256,
     current_time,
-    utils
+    utils,
+    deep_copy
 }
