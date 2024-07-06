@@ -4,6 +4,7 @@ const config_router = require('../src/router_config.js').config_router;
 const nostr = require('nostr');
 const current_time = require('../src/utils.js').current_time;
 const { supertest_client } = require('./controllers/utils.js');
+const { v4: uuidv4 } = require('uuid')
 
 test('config_router - Account management routes', async (t) => {
   const account_info = {
@@ -46,6 +47,17 @@ test('config_router - Account management routes', async (t) => {
           if (options.reverse) {
             return Object.keys(pubkeys_to_user_ids).reverse()
           }
+          return Object.keys(pubkeys_to_user_ids)
+        }
+      },
+      pubkeys_to_user_uuids: {
+        get: (pubkey) => {
+          return uuidv4()
+        },
+        put: (pubkey, user_uuid) => {
+          return
+        },
+        getKeys: (options) => {
           return Object.keys(pubkeys_to_user_ids)
         }
       }

@@ -137,6 +137,21 @@ function add_successful_transactions_to_account(api, pubkey, transactions) {
   return { account: new_account, user_id, request_error: null }
 }
 
+/** Records that iap history was refreshed
+* @param {Object} api - The API object
+* @param {string} pubkey - The public key of the user, hex encoded
+* @returns {{account?: Object, request_error?: string | null, user_id?: number}} - The account object, or null if the account does not exist, and the request error, or null if there was no error
+*/
+function mark_iap_history_was_refreshed(api, pubkey) {
+  const account = get_account(api, pubkey)
+  if (!account) {
+    return { request_error: 'Account not found' }
+  }
+  account.last_iap_history_refresh = current_time()
+  put_account(api, pubkey, account)
+  return { account: account, request_error: null }
+}
+
 function get_account_info_payload(subscriber_number, account, authenticated = false) {
   if (!account)
     return null
@@ -183,4 +198,4 @@ function delete_account(api, pubkey) {
   return { delete_error: null };
 }
 
-module.exports = { check_account, create_account, get_account_info_payload, get_account, put_account, get_account_and_user_id, get_user_id_from_pubkey, get_user_uuid, delete_account, add_successful_transactions_to_account }
+module.exports = { check_account, create_account, get_account_info_payload, get_account, put_account, get_account_and_user_id, get_user_id_from_pubkey, get_user_uuid, delete_account, add_successful_transactions_to_account, mark_iap_history_was_refreshed }

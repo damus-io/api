@@ -175,3 +175,72 @@ test('IAP Flow — Repeated receipts', async (t) => {
 
   t.end();
 });
+
+// This flow is necessary in the following cases:
+// - Subscriber uses TestFlight version which is not connected to the production IAP environment
+// - Subscriber does not use the iOS app for several weeks and the receipt is no longer available from the local StoreKit API
+// - Other conditions that may prevent the receipt/transaction ID from being sent from the user's device to the server.
+test('IAP Flow — server to server renewal flow (no receipt sent from user device)', async (t) => {
+  // Initialize the PurpleTestController and a client
+  const purple_api_controller = await PurpleTestController.new(t);
+  const user_pubkey_1 = purple_api_controller.new_client();
+
+  // Set the current time to the time of the purchase, and associate the pubkey with the user_uuid on the server
+  const user_uuid = MOCK_ACCOUNT_UUIDS[0]
+  purple_api_controller.set_account_uuid(user_pubkey_1, user_uuid); // Associate the pubkey with the user_uuid on the server
+  const entire_decoded_tx_history = purple_api_controller.iap.get_decoded_transaction_history(user_uuid)
+  if (entire_decoded_tx_history.length != 2) {
+    t.fail('Expected 2 transactions in the decoded transaction history. The test assumption is broken and it needs to be updated.')
+    t.end()
+    return
+  }
+  let [tx_1, tx_2] = entire_decoded_tx_history
+  purple_api_controller.set_current_time(tx_1.purchaseDate/1000); // Set the current time to the time of the first purchase
+
+  // Edit transaction history on our mock IAP controller so that it contains only one transaction for now.
+  // We will re-add the second transaction later to simulate the renewal.
+  const transaction_id = purple_api_controller.iap.get_transaction_id(user_uuid);
+  let encoded_transaction_history = purple_api_controller.iap.get_transaction_history(transaction_id);
+  purple_api_controller.iap.set_transaction_history(transaction_id, [encoded_transaction_history[0]]);
+
+  // Try to get the account info
+  const response = await purple_api_controller.clients[user_pubkey_1].get_account();
+  t.same(response.statusCode, 404); // Account should not exist yet
+
+  // Simulate first IAP purchase on the iOS side
+  // Send the receipt to the server to activate the account
+  const iap_response = await purple_api_controller.clients[user_pubkey_1].send_transaction_id(user_uuid, transaction_id);
+  t.same(iap_response.statusCode, 200);
+
+  // Read the account info and check that the account is active
+  const account_info_response_1 = await purple_api_controller.clients[user_pubkey_1].get_account();
+  t.same(account_info_response_1.statusCode, 200);
+  t.same(account_info_response_1.body.active, true);
+
+  // Let's move the clock forward to just before the renewal date
+  purple_api_controller.set_current_time(account_info_response_1.body.expiry - 60 * 1); // 1 minute before expiry
+
+  // Read the account info again and check that the account is still active
+  const account_info_response_2 = await purple_api_controller.clients[user_pubkey_1].get_account();
+  t.same(account_info_response_2.statusCode, 200);
+  t.same(account_info_response_2.body.active, true);
+
+  // Let's move the clock forward to the purchase date of the 2nd transaction
+  purple_api_controller.set_current_time(tx_2.purchaseDate/1000);
+
+  // Now, let's add the 2nd transaction to the history again, to simulate that a renewal has occurred on the Apple server.
+  purple_api_controller.iap.set_transaction_history(transaction_id, encoded_transaction_history);
+
+  // "NO-OP" - The user does not send the receipt to the server this time
+
+  // Move the clock forward 1 minute
+  purple_api_controller.set_current_time(tx_2.purchaseDate/1000 + 60 * 1);
+
+  // Read the account info again and check that the account is active
+  const account_info_response_3 = await purple_api_controller.clients[user_pubkey_1].get_account();
+  t.same(account_info_response_3.statusCode, 200);
+  t.same(account_info_response_3.body.expiry, tx_2.expiresDate/1000);
+  t.same(account_info_response_3.body.active, true);
+
+  t.end();
+});

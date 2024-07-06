@@ -8,6 +8,7 @@ const { required_nip98_auth, capture_raw_body, optional_nip98_auth } = require('
 const { nip19 } = require('nostr-tools')
 const { PURPLE_ONE_MONTH } = require('./invoicing')
 const error = require("debug")("api:error")
+const { update_iap_history_with_apple_if_needed_and_return_updated_user } = require('./iap_refresh_management')
 
 function config_router(app) {
   const router = app.router
@@ -36,13 +37,18 @@ function config_router(app) {
 
   // MARK: Account management routes
 
-  router.get('/accounts/:pubkey', (req, res) => {
+  router.get('/accounts/:pubkey', async (req, res) => {
     const id = req.params.pubkey
     if (!id) {
       error_response(res, 'Could not parse account id')
       return
     }
-    let { account, user_id } = get_account_and_user_id(app, id)
+    let { account, user_id, request_error } = await update_iap_history_with_apple_if_needed_and_return_updated_user(app, id)
+
+    if (request_error) {
+      // Log the error, but continue with the request
+      error("Error when updating IAP history: %s", request_error)
+    }
 
     if (!account) {
       simple_response(res, 404)
