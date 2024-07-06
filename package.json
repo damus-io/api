@@ -11,9 +11,10 @@
   },
   "scripts": {
     "test": "ALLOW_HTTP_AUTH=\"true\" DEEPL_KEY=123 TRANSLATION_PROVIDER=mock tap test/*.test.js",
+    "test-path": "ALLOW_HTTP_AUTH=\"true\" DEEPL_KEY=123 TRANSLATION_PROVIDER=mock tap",
     "test-translate": "ALLOW_HTTP_AUTH=\"true\" TRANSLATION_PROVIDER=mock tap test/translate.test.js",
     "test-noswhere": "ALLOW_HTTP_AUTH=\"true\" TRANSLATION_PROVIDER=noswhere tap test/translate.test.js",
-    "debug-test": "ALLOW_HTTP_AUTH=\"true\" DEEPL_KEY=123 tap test/*.test.js --timeout=2400",
+    "debug-test": "ALLOW_HTTP_AUTH=\"true\" TRANSLATION_PROVIDER=mock DEEPL_KEY=123 tap test/*.test.js --timeout=2400",
     "start": "node src/index.js",
     "dev": "TRANSLATION_PROVIDER=mock ENABLE_HTTP_AUTH=\"true\" node src/index.js",
     "dev-debug": "TRANSLATION_PROVIDER=mock ENABLE_HTTP_AUTH=\"true\" node --inspect src/index.js",
