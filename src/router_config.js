@@ -305,7 +305,87 @@ function config_router(app) {
     }
   })
 
-  // MARK: OTP routes
+  // MARK: OTP lightning checkout routes
+
+  /**
+    * This route is used to request an OTP code for a specific checkout.
+    * 
+    * @param {string} req.params.checkout_id - The ID of the checkout object.
+    * @param {string} req.params.pubkey - The public key of the user verifying the OTP.
+    * 
+    * @returns {Object} - A JSON response indicating whether the OTP code was sent successfully
+    */
+  router.post('/ln-checkout/:checkout_id/request-otp/:pubkey', async (req, res) => {
+    const pubkey = req.params.pubkey
+    if (!pubkey) {
+      invalid_request(res, 'Could not parse account pubkey')
+      return
+    }
+    
+    const checkout_id = req.params.checkout_id
+    if (!checkout_id) {
+      error_response(res, 'Could not parse checkout_id')
+      return
+    }
+    
+    const otp_code = await app.web_auth_manager.generate_otp(pubkey)
+    await app.web_auth_manager.send_otp(pubkey, otp_code)
+    json_response(res, { success: true })
+  });
+  
+  /**
+    * This route is used to verify an OTP code for a specific checkout.
+    * 
+    * @param {string} req.params.checkout_id - The ID of the checkout object.
+    * @param {string} req.params.pubkey - The public key of the user verifying the OTP.
+    * @param {string} req.body.otp_code - The OTP code to verify.
+    * 
+    * @returns {Object} - A JSON response containing the checkout object if the OTP is valid, or an error message if invalid.
+    */
+  router.put('/ln-checkout/:checkout_id/verify-otp/:pubkey', async (req, res) => {
+    const pubkey = req.params.pubkey
+    if (!pubkey) {
+      invalid_request(res, 'Could not parse account pubkey')
+      return
+    }
+    
+    const checkout_id = req.params.checkout_id
+    if (!checkout_id) {
+      error_response(res, 'Could not parse checkout_id')
+      return
+    }
+    
+    const otp_code = req.body.otp_code
+    if (!otp_code) {
+      invalid_request(res, 'Missing otp_code')
+      return
+    }
+    
+    const is_valid = await app.web_auth_manager.validate_otp(pubkey, otp_code)
+    if(!is_valid) {
+      unauthorized_response(res, { valid: false })
+      return
+    }
+    
+    try {
+      const response = await app.invoice_manager.verify_checkout_object(checkout_id, pubkey)
+      if (response.request_error) {
+        invalid_request(res, response.request_error)
+      }
+      if (response.checkout_object) {
+        const session_token = await app.web_auth_manager.create_session(pubkey)
+        json_response(res, { 
+          checkout_object: response.checkout_object,
+          otp: { valid: true, session_token: session_token }
+        })
+      }
+    } catch (e) {
+      error("%s", e.toString())
+      invalid_request(res, e.toString())
+    }
+  })
+
+  // MARK: OTP login routes
 
   router.post('/accounts/:pubkey/request-otp', async (req, res) => {
     const pubkey = req.params.pubkey
