@@ -137,31 +137,31 @@ class WebAuthManager {
   async require_web_auth(req, res, next) {
     const auth_header = req.header('Authorization');
     if (!auth_header) {
-      unauthorized_response(res, 'Unauthorized');
+      unauthorized_response(res, 'Unauthorized, no auth header');
       return;
     }
 
     const [auth_type, token] = auth_header.split(' ');
     if (auth_type !== 'Bearer') {
-      unauthorized_response(res, 'Unauthorized');
+      unauthorized_response(res, 'Unauthorized, invalid auth type');
       return;
     }
 
     if (!token) {
-      unauthorized_response(res, 'Unauthorized');
+      unauthorized_response(res, 'Unauthorized, no token');
       return;
     }
 
     const session_data = await this.dbs.sessions.get(token);
     if (!session_data) {
-      unauthorized_response(res, 'Unauthorized');
+      unauthorized_response(res, 'Unauthorized, invalid token');
       return;
     }
 
     // Check if the session has expired
     if (current_time() - session_data.created_at > this.session_expiry) {
       await this.dbs.sessions.del(token);
-      unauthorized_response(res, 'Unauthorized');
+      unauthorized_response(res, 'Unauthorized, session expired');
       return;
     }
 
