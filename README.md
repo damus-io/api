@@ -74,4 +74,8 @@ curl -X PUT http://<HOST_AND_PORT>/admin/users/<PUBKEY_HEX_FORMAT>/account-uuid 
      -d '{"admin_password": "<ADMIN_PASSWORD_SET_ON_THE_RESPECTIVE_ENV_VARIABLE>", "account_uuid": "<UUID_FOUND_ON_IAP_TRANSACTION>"}'
 ```
 
+### Failures around Lightning Network payments
 
+Ensure you are running Node.js v18.x. Preferably, use the provided nix-shell environment to ensure you are using the correct version of Node.js.
+
+There is a known issue with Node.js v22.x where the `ln.connect_and_init` call does not work with the way things are setup.
