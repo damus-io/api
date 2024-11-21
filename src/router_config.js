@@ -9,6 +9,8 @@ const { nip19 } = require('nostr-tools')
 const { PURPLE_ONE_MONTH } = require('./invoicing')
 const error = require("debug")("api:error")
 const { update_iap_history_with_apple_if_needed_and_return_updated_user } = require('./iap_refresh_management')
+const fs = require('fs');
+const path = require('path');
 
 function config_router(app) {
   const router = app.router
@@ -440,6 +442,30 @@ function config_router(app) {
       return
     }
     json_response(res, get_account_info_payload(user_id, account, true))
+    return
+  });
+  
+  router.get('/notedeck-install-instructions', app.web_auth_manager.require_web_auth.bind(app.web_auth_manager), async (req, res) => {
+    const pubkey = req.authorized_pubkey
+    const { account, user_id } = get_account_and_user_id(app, pubkey)
+    if (!account) {
+      simple_response(res, 404)
+      return
+    }
+    const account_info = get_account_info_payload(user_id, account, true)
+    if(account_info.active == true) {
+      const installInstructionsPath = path.resolve('notedeck-install-instructions.md');
+      try {
+        const installInstructions = fs.readFileSync(installInstructionsPath, { encoding: 'utf8' });
+        json_response(res, { value: installInstructions });
+        return
+      } catch (err) {
+        console.log(err);
+        error("Failed to read file: %s", err.toString());
+        error_response(res, 'Failed to load installation instructions');
+        return
+      }
+    }
     return
   });
 
