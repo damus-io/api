@@ -10,7 +10,7 @@ const debug = require('debug')('api')
 const { PurpleInvoiceManager } = require('./invoicing')
 const { WebAuthManager } = require('./web_auth')
 
-const ENV_VARS = ["LN_NODE_ID", "LN_NODE_ADDRESS", "LN_RUNE", "LN_WS_PROXY", "DEEPL_KEY", "DB_PATH"]
+const ENV_VARS = ["LN_NODE_ID", "LN_NODE_ADDRESS", "LN_RUNE", "LN_WS_PROXY", "DEEPL_KEY", "DB_PATH", "NOTEDECK_INSTALL_MD"]
 
 function check_env() {
   const missing = []

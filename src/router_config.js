@@ -454,7 +454,7 @@ function config_router(app) {
     }
     const account_info = get_account_info_payload(user_id, account, true)
     if(account_info.active == true) {
-      const installInstructionsPath = path.resolve('notedeck-install-instructions.md');
+      const installInstructionsPath = path.resolve(process.env.NOTEDECK_INSTALL_MD);
       try {
         const installInstructions = fs.readFileSync(installInstructionsPath, { encoding: 'utf8' });
         json_response(res, { value: installInstructions });

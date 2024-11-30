@@ -12,6 +12,7 @@ The Damus API backend for Damus Purple and other functionality.
 
 - `DB_PATH`: Path to the folder where to save mdb files.
 - `TESTFLIGHT_URL`: URL for the TestFlight app (optional)
+- `NOTEDECK_INSTALL_MD`: URL for the notedeck installation instructions markdown
 
 #### Translations
 
