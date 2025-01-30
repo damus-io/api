@@ -9,8 +9,8 @@ const { v4: uuidv4 } = require('uuid')
 test('config_router - Account management routes', async (t) => {
   const account_info = {
     pubkey: 'abc123',
-    created_at: Date.now() - 60 * 60 * 24 * 30 * 1000, // 30 days ago
-    expiry: Date.now() + 60 * 60 * 24 * 30 * 1000 // 30 days
+    created_at: current_time() - 60 * 60 * 24 * 30, // 30 days ago
+    expiry: current_time() + 60 * 60 * 24 * 30 // 30 days
   };
   const pubkeys_to_user_ids = {
     'abc123': 1
@@ -86,7 +86,10 @@ test('config_router - Account management routes', async (t) => {
       subscriber_number: 1,
       expiry: account_info.expiry,
       active: true,
-      testflight_url: null
+      testflight_url: null,
+      attributes: {
+        member_for_more_than_one_year: false
+      }
     };
     t.same(res.body, expectedData, 'Response should match expected value');
     t.end();

@@ -21,7 +21,7 @@ const MOCK_TRANSACTION_HISTORY = [{
   type: "iap",
   id: "1",
   start_date: current_time(),
-  end_date: current_time() + 60 * 60 * 24 * 30,
+  end_date: current_time() + 365 * 24 * 60 * 60,
   purchased_date: current_time(),
   duration: null
 }];
