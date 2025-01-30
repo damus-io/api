@@ -160,7 +160,7 @@ function config_router(app) {
       }
 
       const transaction_id = req.body.transaction_id
-      if (!transaction_id) {
+      if (!transaction_id && transaction_id != 0) { // Xcode environment sends 0 as a transaction id, so it is not "missing" in that case
         invalid_request(res, 'Missing transaction_id')
         return
       }
