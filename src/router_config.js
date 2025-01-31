@@ -444,30 +444,27 @@ function config_router(app) {
     json_response(res, get_account_info_payload(user_id, account, true))
     return
   });
-  
-  router.get('/notedeck-install-instructions', app.web_auth_manager.require_web_auth.bind(app.web_auth_manager), async (req, res) => {
-    const pubkey = req.authorized_pubkey
-    const { account, user_id } = get_account_and_user_id(app, pubkey)
-    if (!account) {
-      simple_response(res, 404)
-      return
-    }
-    const account_info = get_account_info_payload(user_id, account, true)
-    if(account_info.active == true) {
-      const installInstructionsPath = path.resolve(process.env.NOTEDECK_INSTALL_MD);
-      try {
-        const installInstructions = fs.readFileSync(installInstructionsPath, { encoding: 'utf8' });
-        json_response(res, { value: installInstructions });
-        return
-      } catch (err) {
-        console.log(err);
-        error("Failed to read file: %s", err.toString());
-        error_response(res, 'Failed to load installation instructions');
+
+  if(process.env.NO_AUTH_WALL_NOTEDECK_INSTALL == "true") {
+    router.get('/notedeck-install-instructions', async (req, res) => {
+      provide_notedeck_instructions(req, res)
+    });
+  }
+  else {
+    router.get('/notedeck-install-instructions', app.web_auth_manager.require_web_auth.bind(app.web_auth_manager), async (req, res) => {
+      const pubkey = req.authorized_pubkey
+      const { account, user_id } = get_account_and_user_id(app, pubkey)
+      if (!account) {
+        simple_response(res, 401)
         return
       }
-    }
-    return
-  });
+      const account_info = get_account_info_payload(user_id, account, true)
+      if(account_info.active == true) {
+        provide_notedeck_instructions(req, res)
+      }
+      return
+    });
+  }
 
   // MARK: Admin routes
 
@@ -681,6 +678,20 @@ function get_allowed_cors_origins() {
   else {
     // Default to Damus.io and localhost
     return ["https://damus.io", "http://localhost:3000"]
+  }
+}
+
+async function provide_notedeck_instructions(req, res) {
+  const installInstructionsPath = path.resolve(process.env.NOTEDECK_INSTALL_MD);
+  try {
+    const installInstructions = fs.readFileSync(installInstructionsPath, { encoding: 'utf8' });
+    json_response(res, { value: installInstructions });
+    return
+  } catch (err) {
+    console.log(err);
+    error("Failed to read file: %s", err.toString());
+    error_response(res, 'Failed to load installation instructions');
+    return
   }
 }
 
