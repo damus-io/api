@@ -152,18 +152,18 @@ function mark_iap_history_was_refreshed(api, pubkey) {
   return { account: account, request_error: null }
 }
 
-// Helper function to calculate the total days of membership from a transaction history
-// @param {Transaction[]} transactions - The transaction history
+// Helper function to calculate the total days of membership for an account
+// @param {Object} account - The account object
 // @returns {number} - The total membership time in seconds
 //
 // Implementation note: Measuring in seconds prevents doing divisions, which speeds up the calculation
-function total_active_membership_time(transactions) {
-  return transactions.reduce((acc, transaction) => {
+function total_active_membership_time(account) {
+  return account.transactions.reduce((acc, transaction) => {
     if(transaction.type === "iap" && transaction.end_date !== null && transaction.start_date !== null) {
       return acc + (transaction.end_date - transaction.start_date)
     }
     else if(transaction.type === "legacy" && transaction.end_date !== null && transaction.start_date !== null) {
-      return acc + (transaction.end_date - transaction.start_date)
+      return acc + (transaction.end_date - account.created_at)
     }
     else if(transaction.type === "ln" && transaction.duration !== null) {
       return acc + transaction.duration
@@ -180,7 +180,7 @@ function get_account_info_payload(subscriber_number, account, authenticated = fa
   // We consider one year to be 360 days, to be a bit lenient with users who might have a few days of downtime in their subscription, and make sure everyone who roughly got a year of service gets the benefit during the announcement.
   const one_year_in_seconds = 360 * 24 * 60 * 60
   // Performance optimization: We only calculate the total membership time if the account is active
-  const member_for_more_than_one_year = account_active ? total_active_membership_time(account.transactions) > one_year_in_seconds : false
+  const member_for_more_than_one_year = account_active ? total_active_membership_time(account) > one_year_in_seconds : false
 
 
   return {
