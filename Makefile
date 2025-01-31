@@ -9,7 +9,7 @@ data.json: fake
 accounts.json: data.json
 	jq '.accounts|to_entries' data.json > accounts.json
 
-subscriptions.json: data.json
+subscriptions.json: accounts.json
 	./scripts/report.py subs_report
 
 active-subscriptions.json: subscriptions.json
