@@ -1,7 +1,7 @@
 const { json_response, simple_response, error_response, invalid_request, unauthorized_response } = require('./server_helpers')
 const { create_account, get_account_info_payload, check_account, get_account, put_account, get_account_and_user_id, get_user_uuid, delete_account, add_successful_transactions_to_account } = require('./user_management')
 const handle_translate = require('./translate')
-const { verify_receipt, verify_transaction_id } = require('./app_store_receipt_verifier');
+const { verify_receipt, verify_transaction_id, processOrderToTransactions } = require('./app_store_receipt_verifier');
 const bodyParser = require('body-parser')
 const cors = require('cors');
 const { required_nip98_auth, capture_raw_body, optional_nip98_auth } = require('./nip98_auth')
@@ -518,7 +518,45 @@ function config_router(app) {
     }
     json_response(res, new_checkout_object)
   })
-  
+
+  router.post('/admin/users/add-transaction-from-order-id', async (req, res) => {
+      const { order_id, pubkey, admin_password } = req.body;
+
+      if (!admin_password || admin_password !== process.env.ADMIN_PASSWORD) {
+          unauthorized_response(res, 'Invalid admin password');
+          return;
+      }
+
+      if (!order_id || !pubkey) {
+          invalid_request(res, 'Missing order_id or pubkey');
+          return;
+      }
+
+      const { account } = get_account_and_user_id(app, pubkey);
+      if (!account) {
+          simple_response(res, 404);
+          return;
+      }
+
+      try {
+          const decodedTransactions = await processOrderToTransactions(order_id);
+
+          if (decodedTransactions.length === 0) {
+              simple_response(res, 404);
+              return;
+          }
+
+          const { account: new_account, user_id: latest_user_id, request_error } = add_successful_transactions_to_account(app, account.pubkey, decodedTransactions);
+          if (request_error) {
+              error_response(res, request_error);
+              return;
+          }
+          json_response(res, get_account_info_payload(latest_user_id, new_account))
+      } catch (error) {
+          error_response(res, `Error processing order_id: ${error.message}`);
+      }
+  });
+
   if (process.env.ENABLE_DEBUG_ENDPOINTS == "true") {
     /**
       * This route is used to delete a user account.
