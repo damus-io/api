@@ -3,6 +3,7 @@ const { add_successful_transactions_to_account } = require('./user_management')
 const { nip19 } = require('nostr-tools')
 const { v4: uuidv4 } = require('uuid')
 const { current_time } = require('./utils')
+const error = require("debug")("api:error")
 
 const PURPLE_ONE_MONTH = "purple_one_month"
 const PURPLE_ONE_YEAR = "purple_one_year"
@@ -68,6 +69,9 @@ class PurpleInvoiceManager {
     if (PURGE_OLD_INVOICES) {
       this.purging_interval_timer = setInterval(() => this.purge_old_invoices(), 10 * 60 * 1000)
     }
+    // Poll for unpaid invoices periodically to handle cases where the client failed to complete the checkout flow
+    const polling_interval_ms = parseInt(process.env.LN_INVOICE_POLLING_INTERVAL_MS) || 60 * 1000
+    this.polling_interval_timer = setInterval(() => this.poll_unpaid_invoices(), polling_interval_ms)
   }
 
   // Purge old invoices from the database
@@ -139,15 +143,38 @@ class PurpleInvoiceManager {
   // Checks the status of the invoice associated with the given checkout object directly with the LN node, and handles successful payments.
   async check_checkout_object_invoice(checkout_id) {
     const checkout_object = await this.get_checkout_object(checkout_id)
+    if (!checkout_object) {
+      return null
+    }
+    if (checkout_object.completed) {
+      return checkout_object  // Already completed, nothing to do
+    }
     if (checkout_object?.invoice) {
       checkout_object.invoice.paid = await this.check_invoice_is_paid(checkout_object.invoice.label)
       if (checkout_object.invoice.paid) {
-        this.handle_successful_payment(checkout_object)
+        await this.handle_successful_payment(checkout_object)
         checkout_object.completed = true
         await this.checkout_sessions_db.put(checkout_id, checkout_object)  // Update the checkout object since the state has changed
       }
     }
     return checkout_object
+  }
+
+  // Polls all incomplete checkout sessions to check for successful payments.
+  // Returns a promise that resolves when all checks are done.
+  async poll_unpaid_invoices() {
+    const checks = []
+    for (const checkout_id of this.checkout_sessions_db.getKeys()) {
+      const checkout_object = this.checkout_sessions_db.get(checkout_id)
+      if (!checkout_object.completed && checkout_object.invoice) {
+        checks.push(
+          this.check_checkout_object_invoice(checkout_id).catch(e => {
+            error("Error polling invoice for checkout %s: %s", checkout_id, e.toString())
+          })
+        )
+      }
+    }
+    return Promise.all(checks)
   }
 
   // Call this when the user wants to checkout a purple subscription and needs an invoice to pay
@@ -239,6 +266,9 @@ class PurpleInvoiceManager {
   async disconnect() {
     if (this.purging_interval_timer) {
       clearInterval(this.purging_interval_timer)
+    }
+    if (this.polling_interval_timer) {
+      clearInterval(this.polling_interval_timer)
     }
   }
 }

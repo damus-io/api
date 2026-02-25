@@ -204,3 +204,39 @@ test('LN Flow — Renewals, expiration and expiry bumping', async (t) => {
   
   t.end();
 });
+
+test('LN Flow — Background polling processes paid invoices without client check', async (t) => {
+  // Initialize the PurpleTestController
+  const purple_api_controller = await PurpleTestController.new(t);
+
+  // Instantiate a new client
+  const user_pubkey_1 = purple_api_controller.new_client();
+
+  // Get the account info (should not exist yet)
+  const response = await purple_api_controller.clients[user_pubkey_1].get_account();
+  t.same(response.statusCode, 404);
+
+  // Start a new checkout
+  const new_checkout_response = await purple_api_controller.clients[user_pubkey_1].new_checkout(PURPLE_ONE_MONTH);
+  t.same(new_checkout_response.statusCode, 200);
+
+  // Verify the checkout (generates invoice)
+  const verify_checkout_response = await purple_api_controller.clients[user_pubkey_1].verify_checkout(new_checkout_response.body.id);
+  t.same(verify_checkout_response.statusCode, 200);
+  t.ok(verify_checkout_response.body.invoice?.bolt11);
+
+  // Pay the invoice without notifying the server (simulates client failure to call check-invoice)
+  purple_api_controller.mock_ln_node_controller.simulate_pay_for_invoice(verify_checkout_response.body.invoice?.bolt11);
+
+  // Trigger background polling directly (simulates the server's periodic poll)
+  await purple_api_controller.purple_api.invoice_manager.poll_unpaid_invoices();
+
+  // The account should now be active — processed by the background poll
+  const account_info_response = await purple_api_controller.clients[user_pubkey_1].get_account();
+  t.same(account_info_response.statusCode, 200);
+  t.same(account_info_response.body.pubkey, user_pubkey_1);
+  t.same(account_info_response.body.active, true);
+  t.same(account_info_response.body.expiry, purple_api_controller.current_time() + 30 * 24 * 60 * 60);
+
+  t.end();
+});

@@ -105,6 +105,9 @@ class PurpleTestController {
 
   async connect_and_init() {
     this.test_request = await supertest_client(this.purple_api.router, this.t);
+    this.t.teardown(async () => {
+      await this.purple_api.invoice_manager.disconnect()
+    })
   }
 
   static async new(t) {
