@@ -180,7 +180,8 @@ function get_account_info_payload(subscriber_number, account, authenticated = fa
   // We consider one year to be 360 days, to be a bit lenient with users who might have a few days of downtime in their subscription, and make sure everyone who roughly got a year of service gets the benefit during the announcement.
   const one_year_in_seconds = 360 * 24 * 60 * 60
   // Performance optimization: We only calculate the total membership time if the account is active
-  const member_for_more_than_one_year = account_active ? total_active_membership_time(account) > one_year_in_seconds : false
+  const total_membership_time = account_active ? total_active_membership_time(account) : 0
+  const member_for_more_than_one_year = total_membership_time > one_year_in_seconds
 
 
   return {
@@ -192,6 +193,7 @@ function get_account_info_payload(subscriber_number, account, authenticated = fa
     testflight_url: (authenticated && account_active) ? process.env.TESTFLIGHT_URL : null,
     attributes: {
       member_for_more_than_one_year: member_for_more_than_one_year,
+      active_membership_duration: total_membership_time,
     }
   }
 }
