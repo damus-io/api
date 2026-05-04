@@ -112,17 +112,12 @@ class MockIAPController {
         * @returns {Promise<HistoryResponse>} - A promise that resolves with the transaction history
         */
       getTransactionHistory(transactionId, revision, transactionHistoryRequest) {
-        // TODO: Make this function more realistic
-        return new Promise((resolve, reject) => {
-          setTimeout(() => {
-            if (!this.mock_controller.mock_transaction_data[transactionId]) {
-              reject(new APIException(400, 4000006))
-            }
-            resolve({
-              signedTransactions: this.mock_controller.mock_transaction_data[transactionId],
-              hasMore: false
-            })
-          }, 500)
+        if (!this.mock_controller.mock_transaction_data[transactionId]) {
+          return Promise.reject(new APIException(400, 4000006))
+        }
+        return Promise.resolve({
+          signedTransactions: this.mock_controller.mock_transaction_data[transactionId],
+          hasMore: false
         })
       }
     }
@@ -149,15 +144,10 @@ class MockIAPController {
         * @returns {Promise<JWSTransactionDecodedPayload>} - A promise that resolves with the decoded payload
         */
       verifyAndDecodeTransaction(signedTransactionInfo) {
-        // TODO: Make this function more realistic
-        return new Promise((resolve, reject) => {
-          setTimeout(() => {
-            if (!MOCK_TRANSACTION_HISTORY_DECODED_DATA[signedTransactionInfo]) {
-              reject()
-            }
-            resolve(MOCK_TRANSACTION_HISTORY_DECODED_DATA[signedTransactionInfo])
-          }, 500)
-        })
+        if (!MOCK_TRANSACTION_HISTORY_DECODED_DATA[signedTransactionInfo]) {
+          return Promise.reject(new Error('Unknown signed transaction'))
+        }
+        return Promise.resolve(MOCK_TRANSACTION_HISTORY_DECODED_DATA[signedTransactionInfo])
       }
     }
   }

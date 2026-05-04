@@ -43,7 +43,7 @@ async function update_iap_history_with_apple_if_needed_and_return_updated_user(a
   }
 }
 
-async function should_iap_transaction_history_be_refreshed(account) {
+function should_iap_transaction_history_be_refreshed(account) {
   const account_active = (account.expiry && current_time() < account.expiry) ? true : false;
   const last_transaction = account.transactions[account.transactions.length - 1];
   if (account_active || last_transaction == undefined || last_transaction.type != "iap") {
