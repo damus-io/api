@@ -2,7 +2,7 @@
 
 Thank you for your interest in the Notedeck Beta release! We are excited to have you try out our software. Below are the instructions for installing Notedeck on your system.
 
-If you encounter any issues, please [contact us](support@damus.io).
+If you encounter any issues, please [contact us](mailto:support@damus.io).
 
 ## Binaries
 
