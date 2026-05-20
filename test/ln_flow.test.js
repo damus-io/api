@@ -240,3 +240,29 @@ test('LN Flow — Background polling processes paid invoices without client chec
 
   t.end();
 });
+
+test('LN Flow — check_invoice_is_paid handles LN RPC rejection without unhandled rejection', async (t) => {
+  const purple_api_controller = await PurpleTestController.new(t);
+  const manager = purple_api_controller.purple_api.invoice_manager;
+  manager.ln_rpc = async () => {
+    // Simulate the production failure mode where a promise rejection reason can be undefined.
+    throw undefined
+  }
+
+  let unhandledRejectionReceived = false
+  const handleUnhandledRejection = () => {
+    unhandledRejectionReceived = true
+  }
+  process.on('unhandledRejection', handleUnhandledRejection)
+
+  try {
+    const result = await manager.check_invoice_is_paid('some-label')
+    await new Promise((resolve) => setImmediate(resolve))
+    t.same(result, undefined)
+    t.equal(unhandledRejectionReceived, false)
+  } finally {
+    process.removeListener('unhandledRejection', handleUnhandledRejection)
+  }
+
+  t.end()
+})
