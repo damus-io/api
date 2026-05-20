@@ -15,6 +15,7 @@ class MockLNNodeController {
   constructor(t, invoice_expiry_period) {
     this.invoice_expiry_period = invoice_expiry_period
     this.control_invoice_should_fail = false
+    this.control_node_is_down = false
     this.invoices = {}
     this.bolt11_to_label = {}
     this.open_intervals = []
@@ -43,6 +44,14 @@ class MockLNNodeController {
     this.invoices[this.bolt11_to_label[bolt11]].error = "Simulated invoice error"
   }
 
+  simulate_node_down() {
+    this.control_node_is_down = true
+  }
+
+  simulate_node_up() {
+    this.control_node_is_down = false
+  }
+
   // MARK: - Mocking LNSocket functions
 
   /** genkey - Generates a new key
@@ -61,6 +70,10 @@ class MockLNNodeController {
    */
   connect_and_init(nodeid, address) {
     return new Promise((resolve, reject) => {
+      if (this.control_node_is_down) {
+        reject(new Error('connect ECONNREFUSED (simulated node down)'))
+        return
+      }
       setTimeout(() => {
         resolve()
       }, 1000)  // Simulate a 1 second delay to make timing more realistic

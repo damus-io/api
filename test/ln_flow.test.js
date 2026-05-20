@@ -240,3 +240,47 @@ test('LN Flow — Background polling processes paid invoices without client chec
 
   t.end();
 });
+
+test('LN Flow — Downed LN node does not crash the server', async (t) => {
+  // Initialize the PurpleTestController
+  const purple_api_controller = await PurpleTestController.new(t);
+  const user_pubkey_1 = purple_api_controller.new_client();
+
+  // Start a new checkout (does not require LN connection)
+  const new_checkout_response = await purple_api_controller.clients[user_pubkey_1].new_checkout(PURPLE_ONE_MONTH);
+  t.same(new_checkout_response.statusCode, 200);
+
+  // Simulate the LN node going down
+  purple_api_controller.mock_ln_node_controller.simulate_node_down();
+
+  // Attempting to verify a checkout (which generates an invoice) should return an error, not crash
+  const verify_checkout_response = await purple_api_controller.clients[user_pubkey_1].verify_checkout(new_checkout_response.body.id);
+  t.same(verify_checkout_response.statusCode, 400, 'verify checkout should fail gracefully when node is down');
+
+  // Restore node, set up a fresh checkout and verify it successfully
+  purple_api_controller.mock_ln_node_controller.simulate_node_up();
+  const new_checkout_response_2 = await purple_api_controller.clients[user_pubkey_1].new_checkout(PURPLE_ONE_MONTH);
+  t.same(new_checkout_response_2.statusCode, 200);
+  const verify_checkout_response_2 = await purple_api_controller.clients[user_pubkey_1].verify_checkout(new_checkout_response_2.body.id);
+  t.same(verify_checkout_response_2.statusCode, 200);
+  t.ok(verify_checkout_response_2.body.invoice?.bolt11);
+
+  // Bring node down again and try to check the invoice — should fail gracefully
+  purple_api_controller.mock_ln_node_controller.simulate_node_down();
+  const check_invoice_response = await purple_api_controller.clients[user_pubkey_1].check_invoice(new_checkout_response_2.body.id);
+  // When the LN node is down, check-invoice responds with 200 and the checkout state as-is (invoice.paid is undefined/undetermined)
+  t.same(check_invoice_response.statusCode, 200, 'check-invoice should respond gracefully (not crash) when node is down');
+  t.same(check_invoice_response.body.invoice?.paid, undefined, 'invoice paid status should be undefined when node is unreachable');
+
+  // Background polling with the LN node down should not throw or crash the process
+  await t.resolves(
+    purple_api_controller.purple_api.invoice_manager.poll_unpaid_invoices(),
+    'background polling should not throw when node is down'
+  );
+
+  // Confirm the server is still up and responding to requests after all the above
+  const get_account_response = await purple_api_controller.clients[user_pubkey_1].get_account();
+  t.same(get_account_response.statusCode, 404, 'server should still be running after LN node failures');
+
+  t.end();
+});

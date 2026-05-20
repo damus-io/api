@@ -303,8 +303,13 @@ function config_router(app) {
       error_response(res, 'Could not parse checkout_id')
       return
     }
-    const checkout_object = await app.invoice_manager.check_checkout_object_invoice(checkout_id)
-    json_response(res, checkout_object)
+    try {
+      const checkout_object = await app.invoice_manager.check_checkout_object_invoice(checkout_id)
+      json_response(res, checkout_object)
+    } catch (e) {
+      error("%s", e.toString())
+      error_response(res, 'Failed to check invoice status')
+    }
   })
 
   // Used by the Damus app to authenticate the user, and generate the final LN invoice
@@ -561,12 +566,17 @@ function config_router(app) {
       return
     }
     const checkout_object = await app.invoice_manager.new_checkout(product_template_name)
-    const { checkout_object: new_checkout_object, request_error } = await app.invoice_manager.verify_checkout_object(checkout_object.id, authorized_pubkey)
-    if (request_error) {
-      invalid_request(res, "Error when verifying checkout: " + request_error)
-      return
+    try {
+      const { checkout_object: new_checkout_object, request_error } = await app.invoice_manager.verify_checkout_object(checkout_object.id, authorized_pubkey)
+      if (request_error) {
+        invalid_request(res, "Error when verifying checkout: " + request_error)
+        return
+      }
+      json_response(res, new_checkout_object)
+    } catch (e) {
+      error("%s", e.toString())
+      error_response(res, 'Failed to create verified checkout')
     }
-    json_response(res, new_checkout_object)
   })
   
   if (process.env.ENABLE_DEBUG_ENDPOINTS == "true") {
@@ -719,6 +729,15 @@ function config_router(app) {
       json_response(res, { success: true })
     });
   }
+
+  // Global error handling middleware — catches errors thrown or passed via next(err) in any route handler
+  // eslint-disable-next-line no-unused-vars
+  router.use((err, req, res, next) => {
+    error('Unhandled route error for %s %s: %s', req.method, req.url, err.toString())
+    if (!res.headersSent) {
+      error_response(res, 'An unexpected error occurred')
+    }
+  })
 }
 
 function get_allowed_cors_origins() {

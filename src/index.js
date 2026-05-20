@@ -7,9 +7,21 @@ const config_router = require('./router_config').config_router
 const dotenv = require('dotenv')
 const express = require('express')
 const debug = require('debug')('api')
+const error = require('debug')('api:error')
 const { PurpleInvoiceManager } = require('./invoicing')
 const { WebAuthManager } = require('./web_auth')
 const { SimplePool } = require('nostr-tools/pool')
+
+// Global handlers to prevent unexpected errors from crashing the server process.
+// These are last-resort safety nets; each request's errors should ideally be caught
+// and handled closer to their source (e.g. in route handlers or invoicing code).
+process.on('uncaughtException', (err) => {
+  error('Uncaught exception: %s', err.toString())
+})
+
+process.on('unhandledRejection', (reason) => {
+  error('Unhandled promise rejection: %s', reason instanceof Error ? reason.toString() : JSON.stringify(reason))
+})
 
 const ENV_VARS = ["LN_NODE_ID", "LN_NODE_ADDRESS", "LN_RUNE", "LN_WS_PROXY", "DEEPL_KEY", "DB_PATH", "NOTEDECK_INSTALL_MD", "NOTEDECK_INSTALL_PREMIUM_MD", "DAMUS_ANDROID_INSTALL_MD", "DAMUS_ANDROID_INSTALL_PREMIUM_MD"]
 

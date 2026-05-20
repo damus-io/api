@@ -257,13 +257,16 @@ class PurpleInvoiceManager {
   async check_invoice_is_paid(label) {
     try {
       const params = { label }
-      return new Promise(async (resolve, reject) => {
-        setTimeout(() => {
-          resolve(undefined)
-        }, parseInt(process.env.LN_INVOICE_CHECK_TIMEOUT_MS) || 60000)
-        const res = await this.ln_rpc({ method: "waitinvoice", params })
-        resolve(res.error ? false : true)
+      const timeout_ms = parseInt(process.env.LN_INVOICE_CHECK_TIMEOUT_MS) || 60000
+      const timeout_promise = new Promise(resolve => {
+        const timer = setTimeout(() => resolve(undefined), timeout_ms)
+        // Don't prevent process exit if nothing else is keeping the event loop alive
+        if (timer.unref) timer.unref()
       })
+      const rpc_promise = this.ln_rpc({ method: "waitinvoice", params })
+        .then(res => res.error ? false : true)
+        .catch(() => undefined)
+      return Promise.race([timeout_promise, rpc_promise])
     }
     catch {
       return undefined
