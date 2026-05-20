@@ -245,22 +245,23 @@ test('LN Flow — check_invoice_is_paid handles LN RPC rejection without unhandl
   const purple_api_controller = await PurpleTestController.new(t);
   const manager = purple_api_controller.purple_api.invoice_manager;
   manager.ln_rpc = async () => {
+    // Simulate the production failure mode where a promise rejection reason can be undefined.
     throw undefined
   }
 
-  let unhandled_rejection_received = false
-  const handle_unhandled_rejection = () => {
-    unhandled_rejection_received = true
+  let unhandledRejectionReceived = false
+  const handleUnhandledRejection = () => {
+    unhandledRejectionReceived = true
   }
-  process.on('unhandledRejection', handle_unhandled_rejection)
+  process.on('unhandledRejection', handleUnhandledRejection)
 
   try {
     const result = await manager.check_invoice_is_paid('some-label')
     await new Promise((resolve) => setImmediate(resolve))
     t.same(result, undefined)
-    t.equal(unhandled_rejection_received, false)
+    t.equal(unhandledRejectionReceived, false)
   } finally {
-    process.removeListener('unhandledRejection', handle_unhandled_rejection)
+    process.removeListener('unhandledRejection', handleUnhandledRejection)
   }
 
   t.end()
