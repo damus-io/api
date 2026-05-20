@@ -7,7 +7,27 @@ module.exports = class NoswhereTranslator {
     constructor() {
         if (!this.#noswhereKey)
             throw new Error("expected NOSWHERE_KEY env var")
-        this.#loadTranslationLangs()
+        this.#loadTranslationLangs().catch((err) => {
+            console.error("error loading noswhere translation langs: %o", err)
+        })
+    }
+    #getRequestId(resp) {
+        return resp.headers?.get?.("x-noswhere-request") || "unknown"
+    }
+    #getBodySnippet(body) {
+        if (typeof body !== "string" || body.length === 0) return "<empty>"
+        if (body.length <= 500) return body
+        return body.slice(0, 500) + "...(truncated)"
+    }
+    async #parseResponse(resp, action) {
+        const request_id = this.#getRequestId(resp)
+        const body = await resp.text()
+        try {
+            return JSON.parse(body)
+        } catch (err) {
+            console.error("noswhere %s response parse error: status=%s ok=%s request=%s body=%o", action, resp.status, resp.ok, request_id, this.#getBodySnippet(body))
+            throw new Error(`error ${action}: invalid JSON response from Noswhere (request: ${request_id})`)
+        }
     }
     async #loadTranslationLangs() {
         let resp = await fetch(this.#noswhereURL + "/langs", {
@@ -18,9 +38,9 @@ module.exports = class NoswhereTranslator {
                 'Content-Type': 'application/json'
             }
         })
-        let data = await resp.json()
+        let data = await this.#parseResponse(resp, "getting translation langs")
         if (!resp.ok) {
-            throw new Error(`error getting translation langs: API failed with ${resp.status} ${data.error} (request: ${resp.headers.get("x-noswhere-request")})`)
+            throw new Error(`error getting translation langs: API failed with ${resp.status} ${data.error} (request: ${this.#getRequestId(resp)})`)
         }
         if (!data[this.#type]) {
             throw new Error(`type ${this.#type} not supported for translation`)
@@ -46,9 +66,9 @@ module.exports = class NoswhereTranslator {
             })
         })
 
-        let data = await resp.json()
+        let data = await this.#parseResponse(resp, "translating")
         if (!resp.ok) {
-            throw new Error(`error translating: API failed with ${resp.status} ${data.error} (request: ${resp.headers.get("x-noswhere-request")})`)
+            throw new Error(`error translating: API failed with ${resp.status} ${data.error} (request: ${this.#getRequestId(resp)})`)
         }
 
         if (data.result) {
