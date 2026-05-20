@@ -20,13 +20,13 @@ module.exports = class NoswhereTranslator {
         return body.slice(0, 500) + "...(truncated)"
     }
     async #parseResponse(resp, action) {
-        const request_id = this.#getRequestId(resp)
+        const requestId = this.#getRequestId(resp)
         const body = await resp.text()
         try {
             return JSON.parse(body)
         } catch (err) {
-            console.error("noswhere %s response parse error: status=%s ok=%s request=%s body=%o", action, resp.status, resp.ok, request_id, this.#getBodySnippet(body))
-            throw new Error(`error ${action}: invalid JSON response from Noswhere (request: ${request_id})`)
+            console.error("noswhere %s response parse error: status=%s ok=%s request=%s body=%o", action, resp.status, resp.ok, requestId, this.#getBodySnippet(body))
+            throw new Error(`error ${action}: invalid JSON response from Noswhere (request: ${requestId})`)
         }
     }
     async #loadTranslationLangs() {

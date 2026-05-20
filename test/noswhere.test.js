@@ -8,9 +8,9 @@ function loadNoswhereTranslator() {
   return require(NOSWHERE_TRANSLATOR_PATH);
 }
 
-function mockHeaders(request_id) {
+function mockHeaders(requestId) {
   return {
-    get: (name) => name === 'x-noswhere-request' ? request_id : null,
+    get: (name) => name === 'x-noswhere-request' ? requestId : null,
   };
 }
 
