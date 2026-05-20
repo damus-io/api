@@ -256,6 +256,7 @@ test('LN Flow — Downed LN node does not crash the server', async (t) => {
   // Attempting to verify a checkout (which generates an invoice) should return an error, not crash
   const verify_checkout_response = await purple_api_controller.clients[user_pubkey_1].verify_checkout(new_checkout_response.body.id);
   t.same(verify_checkout_response.statusCode, 400, 'verify checkout should fail gracefully when node is down');
+  t.ok(verify_checkout_response.body.error, 'error response body should contain an error message');
 
   // Restore node, set up a fresh checkout and verify it successfully
   purple_api_controller.mock_ln_node_controller.simulate_node_up();

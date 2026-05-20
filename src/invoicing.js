@@ -265,10 +265,14 @@ class PurpleInvoiceManager {
       })
       const rpc_promise = this.ln_rpc({ method: "waitinvoice", params })
         .then(res => res.error ? false : true)
-        .catch(() => undefined)
+        .catch((e) => {
+          error("Error checking invoice status for label %s: %s", label, e.toString())
+          return undefined
+        })
       return Promise.race([timeout_promise, rpc_promise])
     }
-    catch {
+    catch (e) {
+      error("Synchronous error setting up invoice check for label %s: %s", label, e.toString())
       return undefined
     }
   }
