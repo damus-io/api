@@ -255,18 +255,26 @@ class PurpleInvoiceManager {
 
   // Checks the status of an invoice once. Returns true if paid, false otherwise.
   async check_invoice_is_paid(label) {
+    const params = { label }
+    const timeout_ms = parseInt(process.env.LN_INVOICE_CHECK_TIMEOUT_MS) || 60000
+    let timeout_id = null
+
+    const timeout_promise = new Promise((resolve) => {
+      timeout_id = setTimeout(() => {
+        resolve(undefined)
+      }, timeout_ms)
+    })
+
+    const waitinvoice_promise = this.ln_rpc({ method: "waitinvoice", params })
+      .then((res) => res.error ? false : true)
+      .catch(() => undefined)
+
     try {
-      const params = { label }
-      return new Promise(async (resolve, reject) => {
-        setTimeout(() => {
-          resolve(undefined)
-        }, parseInt(process.env.LN_INVOICE_CHECK_TIMEOUT_MS) || 60000)
-        const res = await this.ln_rpc({ method: "waitinvoice", params })
-        resolve(res.error ? false : true)
-      })
-    }
-    catch {
-      return undefined
+      return await Promise.race([waitinvoice_promise, timeout_promise])
+    } finally {
+      if (timeout_id) {
+        clearTimeout(timeout_id)
+      }
     }
   }
 
