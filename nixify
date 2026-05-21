@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 rm -rf node_modules
-node2nix -18 -l package-lock.json
+node2nix --pkg-name nodejs_20 -l package-lock.json
 nix-build -A package
