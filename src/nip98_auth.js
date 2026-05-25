@@ -53,7 +53,7 @@ async function nip98_verify_auth_header(auth_header, url, method, body) {
     }
 
     if (current_time() - note.created_at > 60 || current_time() - note.created_at < 0) {
-      return { authorized_pubkey: null, error: 'Auth note is too old or too new' };
+      return { authorized_pubkey: null, error: 'Auth note is too old or too new. Please check that your device clock is set correctly.' };
     }
 
     if (body !== undefined && body !== null) {
