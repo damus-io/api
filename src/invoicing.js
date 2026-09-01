@@ -1,4 +1,5 @@
 const LNSocket = require('lnsocket')
+const net = require('net')
 const { add_successful_transactions_to_account } = require('./user_management')
 const { nip19 } = require('nostr-tools')
 const { v4: uuidv4 } = require('uuid')
@@ -284,9 +285,11 @@ class PurpleInvoiceManager {
     const { method, params } = args
     const ln = await PurpleInvoiceManager.LNSocket()
     try {
-      ln.genkey()
-      await ln.connect_and_init(this.nodeid, this.address)
-      return await ln.rpc({ rune: this.rune, method, params })
+      return await with_socket_errors_captured(async () => {
+        ln.genkey()
+        await ln.connect_and_init(this.nodeid, this.address)
+        return await ln.rpc({ rune: this.rune, method, params })
+      })
     } finally {
       if (typeof ln.destroy === 'function') {
         ln.destroy()
@@ -309,6 +312,55 @@ class PurpleInvoiceManager {
     if (this.polling_interval_timer) {
       clearInterval(this.polling_interval_timer)
     }
+  }
+}
+
+// lnsocket creates its TCP socket with net.createConnection and never attaches
+// an 'error' listener to it, so a lightning node that is down or drops the
+// connection makes node emit an unhandled 'error' event, which takes down the
+// whole API server (the error is not thrown from connect_and_init, so it cannot
+// be caught with a plain try/catch). Wrap net.createConnection so that sockets
+// created while we are talking to the node always have an error listener, and
+// turn those socket errors into a rejection for the caller instead.
+const socket_error_handlers = new Set()
+let net_patched = false
+
+function patch_net_create_connection() {
+  if (net_patched) {
+    return
+  }
+  net_patched = true
+  const create_connection = net.createConnection
+  net.createConnection = function damus_create_connection(...args) {
+    const socket = create_connection.apply(this, args)
+    if (socket_error_handlers.size > 0) {
+      // Snapshot the handlers active at creation time: the socket can fail long
+      // after connecting (mid-RPC), and its owner must still hear about it.
+      const handlers = Array.from(socket_error_handlers)
+      socket.on('error', (e) => {
+        error("Lightning node socket error: %s", e.toString())
+        for (const handler of handlers) {
+          handler(e)
+        }
+      })
+    }
+    return socket
+  }
+}
+
+// Runs `fn` with socket errors from the lightning connection captured, so they
+// reject instead of crashing the process.
+async function with_socket_errors_captured(fn) {
+  patch_net_create_connection()
+  let on_socket_error
+  const socket_error = new Promise((_resolve, reject) => {
+    on_socket_error = reject
+  })
+  socket_error_handlers.add(on_socket_error)
+  try {
+    return await Promise.race([fn(), socket_error])
+  } finally {
+    socket_error_handlers.delete(on_socket_error)
   }
 }
 

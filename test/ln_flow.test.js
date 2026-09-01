@@ -4,6 +4,7 @@
 const test = require('tap').test;
 const { PurpleTestController } = require('./controllers/purple_test_controller.js');
 const { PURPLE_ONE_MONTH } = require('../src/invoicing.js');
+const net = require('net');
 
 test('LN Flow — Expected flow', async (t) => {
   // Initialize the PurpleTestController
@@ -286,3 +287,53 @@ test('LN Flow — failed LN node connection during check-invoice returns unpaid 
 });
 
 
+
+test('LN Flow — an unhandled socket error from a downed LN node does not crash the server', async (t) => {
+  const purple_api_controller = await PurpleTestController.new(t);
+  const user_pubkey_1 = purple_api_controller.new_client();
+
+  const new_checkout_response = await purple_api_controller.clients[user_pubkey_1].new_checkout(PURPLE_ONE_MONTH);
+  t.same(new_checkout_response.statusCode, 200);
+
+  const verify_checkout_response = await purple_api_controller.clients[user_pubkey_1].verify_checkout(new_checkout_response.body.id);
+  t.same(verify_checkout_response.statusCode, 200);
+
+  // Find a port nobody is listening on, so connecting to it is refused
+  const refused_port = await new Promise((resolve) => {
+    const probe = net.createServer();
+    probe.listen(0, '127.0.0.1', () => {
+      const port = /** @type {import('net').AddressInfo} */ (probe.address()).port;
+      probe.close(() => resolve(port));
+    });
+  });
+
+  const originalLNSocket = purple_api_controller.purple_api.invoice_manager.constructor.LNSocket;
+  purple_api_controller.purple_api.invoice_manager.constructor.LNSocket = async () => ({
+    genkey() {},
+    async connect_and_init() {
+      // Reproduce how lnsocket connects: it opens the TCP socket without ever
+      // attaching an 'error' listener, and only resolves once the socket opens.
+      // A refused connection therefore surfaces as an unhandled 'error' event
+      // rather than as a rejection here.
+      const socket = net.createConnection(refused_port, '127.0.0.1');
+      await new Promise((resolve) => socket.on('connect', resolve));
+    },
+    destroy() {}
+  });
+
+  t.teardown(() => {
+    purple_api_controller.purple_api.invoice_manager.constructor.LNSocket = originalLNSocket;
+  });
+
+  const failedCheckResponse = await purple_api_controller.clients[user_pubkey_1].check_invoice(new_checkout_response.body.id);
+  t.same(failedCheckResponse.statusCode, 200);
+  t.same(failedCheckResponse.body.completed, false);
+  t.same(failedCheckResponse.body.invoice?.paid, undefined);
+
+  // The server is still alive and serving requests
+  const productsResponse = await purple_api_controller.clients[user_pubkey_1].get_products();
+  t.same(productsResponse.statusCode, 200);
+
+  const secondCheckoutResponse = await purple_api_controller.clients[user_pubkey_1].new_checkout(PURPLE_ONE_MONTH);
+  t.same(secondCheckoutResponse.statusCode, 200);
+});
