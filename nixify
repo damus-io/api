@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
-rm -rf node_modules
-node2nix --pkg-name nodejs_22 -l package-lock.json
-nix-build -A package
+# Refresh npmDepsHash in default.nix after package-lock.json changes.
+set -eu
+
+hash=$(nix-shell -p prefetch-npm-deps --run 'prefetch-npm-deps package-lock.json')
+sed -i.bak "s|npmDepsHash = \".*\";|npmDepsHash = \"$hash\";|" default.nix
+rm -f default.nix.bak
+echo "npmDepsHash = $hash"
+
+nix-build
