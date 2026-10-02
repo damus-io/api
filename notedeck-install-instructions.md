@@ -4,7 +4,7 @@ Thank you for your interest in the Notedeck Alpha release! We are excited to hav
 
 If you are a Purple user, you can now access our beta release! To access the beta install instructions, click [here](/purple/login).
 
-If you encounter any issues, please [contact us](support@damus.io).
+If you encounter any issues, please [contact us](mailto:support@damus.io).
 
 ## Binaries
 
