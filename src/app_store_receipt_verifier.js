@@ -315,7 +315,19 @@ function createAppStoreServerAPIClientFromEnv() {
   return new AppStoreServerAPIClient(encodedKey, keyId, issuerId, bundleId, environment);
 }
 
-/** 
+
+async function processOrderToTransactions(order_id) {
+    const client = createAppStoreServerAPIClientFromEnv();
+    const rootCaDir = process.env.IAP_ROOT_CA_DIR || './apple-root-ca';
+    const bundleId = process.env.IAP_BUNDLE_ID;
+    const environment = process.env.IAP_ENVIRONMENT;
+
+    const transactions = await client.lookUpOrderId(order_id);
+    const rootCAs = readCertificateFiles(rootCaDir);
+    return await verifyAndDecodeTransactions(transactions.signedTransactions, rootCAs, environment, bundleId);
+}
+
+/**
  * Gets the App Store environment from the environment variables.
  * 
  * @returns {Environment} The App Store environment.
@@ -325,5 +337,5 @@ function getAppStoreEnvironmentFromEnv() {
 }
 
 module.exports = {
-    verify_receipt, verify_transaction_id, lookup_order_id
+    verify_receipt, verify_transaction_id, lookup_order_id, processOrderToTransactions
 };
